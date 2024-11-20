@@ -1,0 +1,170 @@
+---
+title: "ds_chemical correlations"
+author: "Josh Alampi"
+date: "2024-02-08"
+output: html_document
+---
+
+# load
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source(here::here("libraries.R"))
+source("functions/analysis functions.R")
+source("functions/ggplot functions.R")
+
+# Load MIREC data
+data <- read.csv("//ais-fs1.sfu.ca/home2/Redirected_Profiles/jalampi/Desktop/MIREC loader 2022/clean data/MIREC data_mixtures.csv")%>% 
+  filter(is.na(srs) == F) %>% 
+  clean_data()
+
+
+chemical_info <- readxl::read_xlsx(here::here("data", "chemical info.xlsx"))
+```
+
+# Clean
+```{r}
+# Only retain chemicals
+chems <- data %>% 
+  select(c(arsenic.t1.flag:lead.t1.res, mercury.t1.flag, mercury.t1.res,
+           bbhc.t1.flag:transnona.t1.res,
+           pfhxs.t1.flag:pfoa.t1.res,
+           pcb118.t1.flag:pcb180.t1.res,
+           bde47.t1.flag:bde47.t1.res)) %>% 
+  select(-c(seq(1, length(.), 2))) %>%  #retains only the odd numbered (.res) columns
+  na.omit() # Remove all NAs
+
+# Fix chemical names
+names <- chemical_info$name 
+colnames(chems) <- names
+
+```
+
+<!-- ```{r} -->
+<!-- c <- chems %>%  -->
+<!--   cor(method = "pearson") %>%  -->
+<!--   as.data.frame() %>%  -->
+<!--   mutate(Variable = row.names(.)) -->
+
+<!-- c_long <- c %>%  -->
+<!--   pivot_longer(cols = names, values_drop_na = TRUE) %>% -->
+<!--   mutate(Variable = factor(Variable), name = factor(name))  -->
+
+
+<!-- ggplot(c_long, -->
+<!--        # Our x and y axis are Variable and name -->
+<!--        # And we want to fill each cell with the value -->
+<!--        aes(x = Variable, y = name, fill = value))+ -->
+<!--     scale_fill_gradient2(low = "blue", high = "red", mid = "white",  -->
+<!--                        midpoint = 0, limit = c(-1,1),  -->
+<!--                        name="Pearson\ncorrelation") + -->
+<!--   theme_bw() +  -->
+<!--   geom_tile(color = "grey") +  -->
+
+<!--   geom_vline(xintercept = c(4.5, 8.5, 11.5, 15.5)) + -->
+<!--   geom_hline(yintercept = c(4.5, 8.5, 11.5, 15.5)) + -->
+
+<!--   theme(text = element_text(size = 9)) + -->
+<!--   theme(axis.text.x = element_text(angle = 315, vjust = 0, hjust = 0)) + -->
+
+<!--   coord_fixed() +  -->
+<!--   geom_text(aes(label = round(value, 2))) + -->
+
+<!--   #Remove axes titles -->
+<!--   theme(axis.title.x=element_blank(), -->
+<!--         axis.title.y=element_blank()) -->
+
+
+
+
+
+
+
+
+
+
+<!-- # geom_tile to draw the graph -->
+<!--   geom_tile() + -->
+<!--   # Color the graph as we like -->
+<!--   # Here our negative correlations are red, positive are blue -->
+<!--   # gradient2 instead of gradient gives us a "mid" color which we can make white -->
+<!--   scale_fill_gradient2(low = "red", high = "blue", mid = "white", -->
+<!--                        midpoint = 0, limit = c(-1,1), space = "Lab", -->
+<!--                        name="Pearson\nCorrelation") + -->
+<!--   # Axis names don't make much sense -->
+<!--   # labs(x = NULL, y = NULL) + -->
+<!--   # We don't need that background -->
+<!--   theme_minimal() + -->
+
+<!--     theme(text = element_text(size = 9)) + -->
+<!--   theme(axis.text.x = element_text(angle = 315, vjust = 0, hjust = 0)) + -->
+<!--   # We want those cells to be square! -->
+<!--   coord_fixed() + -->
+<!--   # If you also want the correlations to be written directly on there, add geom_text -->
+<!--   geom_text(aes(label = round(value, 2))) -->
+
+<!-- ``` -->
+
+
+# Make correlation heatmap
+```{r}
+cor <- cor(chems, method = "pearson") 
+cor[upper.tri(cor)] <- NA
+# cor[cor == 1] <- NA
+
+breaks <- c(4.5, 8.5, 11.5, 15.5)
+
+heatmap <- cor %>% 
+  melt(na.rm = T) %>% 
+  ggplot(data = ., aes(Var1, Var2, fill = value)) +
+  
+  # Add colourful tiles
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), 
+                       name="Pearson\ncorrelation") +
+  geom_tile() +
+  
+  # Add text
+  geom_text(aes(label = round(value, 2))) +
+  
+  # Aesthetics 
+  theme_minimal() + 
+  
+  # geom_vline(xintercept = c(4.5, 8.5, 11.5, 15.5)) +
+  # geom_hline(yintercept = c(4.5, 8.5, 11.5, 15.5)) +
+  
+  # add vertical line segments
+  annotate("segment", x=breaks, xend= breaks, y= 0.5, yend= breaks, size = 0.5) +
+  # 
+  # # add horizontal line segments
+  annotate("segment", x= breaks, xend= 16.5, y= breaks, yend= breaks, size = 0.5) +
+  
+  theme(text = element_text(size = 7)) +
+  theme(axis.text.x = element_text(angle = 315, vjust = 0, hjust = 0, size = 9)) +
+  theme(axis.text.y = element_text(size = 9)) +
+  
+  coord_fixed() + 
+  
+  #Remove axes titles
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) + 
+  
+   theme(panel.grid.major = element_blank(),
+         panel.grid.minor = element_blank(),
+         panel.border = element_blank() )
+
+heatmap
+```
+
+
+# Save
+```{r}
+my_ggsave(heatmap, path = "output/", file_name = "fig_heatmap", archive_path = "ds/archive/", height = 7, width = 7.5)
+```
+
+```{r}
+
+```
+

@@ -1,0 +1,211 @@
+---
+title: "ds_chemical distribution"
+author: "Josh Alampi"
+date: "2023-07-07"
+output: html_document
+---
+
+# load
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source(here::here("libraries.R"))
+
+data <- read.csv("//ais-fs1.sfu.ca/home2/Redirected_Profiles/jalampi/Desktop/MIREC loader 2022/clean data/2022-05-02_MIREC data.csv") %>% 
+  filter(is.na(srs) == F) #n= 601 mothers whose child had an SRS score. 
+
+
+chemical_info <- readxl::read_xlsx(here::here("data", "chemical info.xlsx")) 
+```
+
+# make function
+```{r}
+get_ds_chems <- function(.data, chem_info, chem_info_row = 1, round = 2, label = NULL) {
+  
+  # Prepare for analysis
+  num_chems <- length(.data) / 2
+
+  chems_lods <- .data %>%
+    dplyr::select(-c(seq(2, num_chems * 2, 2))) #retains only the even numbered (.lod) columns
+  
+  chems <- .data %>%
+    dplyr::select(-c(seq(1, num_chems * 2, 2))) #retains only the odd numbered (.res) columns
+
+  # Make container
+
+  if (is.null(label)) {
+    ds_chem <- setNames(data.frame(matrix(data = NA, nrow = num_chems, ncol = 9)),
+                        c("Biomarker Name", "n", "%>LOD", "GM (GSD)",
+                          "Percentiles_25ᵗʰ", "Percentiles_50ᵗʰ", "Percentiles_75ᵗʰ", "Percentiles_95ᵗʰ",
+                          "CHMS GMᵃ")) #set column names
+    skip <- 0
+
+  } else { # If a label is provided, then an extra row will be added, so that the first row can contain this label. 
+    ds_chem <- setNames(data.frame(matrix(data = NA, nrow = num_chems + 1, ncol = 9)),
+                        c("Biomarker Name", "n", "%>LOD", "GM (GSD)",
+                          "Percentiles_25ᵗʰ", "Percentiles_50ᵗʰ", "Percentiles_75ᵗʰ", "Percentiles_95ᵗʰ",
+                          "CHMS GMᵃ")) #set column names
+    skip <- 1
+    ds_chem[1, 1] <- label
+
+  }
+
+  # Analysis
+  for(i in 1:num_chems) {
+
+    # Get basic information
+    this_name <-      chem_info$name[chem_info_row + i - 1]
+    this_chem_info <- chem_info$CHMS_value[chem_info_row + i - 1]
+
+    # select the column for this loop
+    x <- chems[,i]
+    x_lod <- chems_lods[,i]
+
+    # find n
+    n <- sum(complete.cases(x))
+
+    # Find % above LOD
+    if(this_name == "ΣDEHPsᶜ" | this_name == "ΣPCBsᵈ"){
+      lod <- "-"
+    } else {
+      lod <- round(table(x_lod)[1] / n, 3) * 100
+    }
+
+    # Calculate descriptive statistics
+    geo_mean <-  round(geoMean(x, na.rm = T), round) # Geometric Mean
+    geo_sd <-    round(geoSD(x, na.rm = T), round) # Geometric SD
+    quantiles <- round(quantile(x, c(0.25, 0.5, 0.75, 0.95), na.rm = T), round) # quantiles
+
+    # store values
+    if (is.null(label)) {
+      ds_chem[i + skip, 1] <- this_name
+    } else {
+      ds_chem[i + skip, 1] <- paste0("   ", this_name)
+    }
+    ds_chem[i + skip, 2] <- n
+    ds_chem[i + skip, 3] <- lod
+    ds_chem[i + skip, 4] <- paste0(geo_mean, " (", geo_sd, ")")
+    ds_chem[i + skip, 5] <- quantiles[1]
+    ds_chem[i + skip, 6] <- quantiles[2]
+    ds_chem[i + skip, 7] <- quantiles[3]
+    ds_chem[i + skip, 8] <- quantiles[4]
+    ds_chem[i + skip, 9] <- this_chem_info
+
+  }
+  
+  return(ds_chem)
+}
+```
+
+# prep
+```{r}
+row_skips <- c(1, 5, 9, 12, 16) 
+labels <- chemical_info$Label[row_skips] # a vector with all the labels I will use in this table
+
+chemical_group_list <- list(select(data, c(arsenic.t1.flag:lead.t1.res, mercury.t1.flag, mercury.t1.res)),
+                            select(data, bbhc.t1.flag:transnona.t1.res),
+                            select(data, pfhxs.t1.flag:pfoa.t1.res),
+                            select(data, pcb118.t1.flag:pcb180.t1.res),
+                            select(data, bde47.t1.flag:bde47.t1.res))
+```
+
+# Analysis
+```{r}
+for (i in 1:length(labels)) {
+  this_chemical_group <- chemical_group_list[[i]] # Loop through i chemical groups
+  
+  this_ds_chem <- get_ds_chems(.data = this_chemical_group, chem_info = chemical_info, 
+                               chem_info_row = row_skips[i], 
+                               label = labels[i]) # the label for the ith chemical group
+  
+  # Merge the dataframes for each chemical group together
+  if (i == 1){ 
+    final_ds_chem <- this_ds_chem
+  } else {
+    final_ds_chem <- rbind(final_ds_chem, this_ds_chem)
+  }
+  rm(this_ds_chem, this_chemical_group)
+}
+
+final_ds_chem
+```
+
+
+
+# save
+```{r}
+#save as a MS excel file
+write_xlsx(final_ds_chem, path = paste0("output/ds/ds_chemical distribution.xlsx", sep = ""))
+write_xlsx(final_ds_chem, path = paste0("output/ds/archive/ds_chemical distribution", "_",  Sys.Date(), ".xlsx", sep = ""))
+
+```
+
+
+# flextable
+```{r}
+title <- "Table 2. Distribution of chemicals during the first trimester of pregnancy, MIREC Study, Canada, 2008-2011 (n = 601)."
+
+footer <- c("a: Concentration in Canadian women aged 20–39 years from cycle 1 (2007–2009) of Canadian health measures survey (CHMS).")
+```
+
+
+
+```{r echo=FALSE}
+init_flextable_defaults()
+
+set_flextable_defaults(
+  font.size = 10, font.family = "Calibri",
+  font.color = "black",
+  table.layout = "fixed",
+  border.color = "black",
+  line_spacing = 1,
+  padding.top = 1, padding.bottom = 1,
+  padding.left = 1, padding.right = 1)
+
+flex_ds_chem <- final_ds_chem %>% 
+  flextable() %>% 
+  
+  # add percentile header
+  separate_header() %>% 
+  hline(i = 1, j = 4:7, part = "header", border = fp_border_default()) %>% 
+  
+  # align header
+  align(align = "center", part = "header") %>%
+  align(align = "left", part = "header", j = 1) %>%
+  
+  # align body
+  align(align = "center", part = "body") %>% 
+  align(align = "left", j = 1) %>% 
+  
+  # merge 
+  merge_h_range(i = c(1, 6, 11, 15, 20),
+                j1 = "Biomarker Name", j2= "CHMS GMᵃ") %>% 
+  
+  # Title and bottom caption
+  add_header_lines(title, top = T) %>%
+  add_footer_lines(value = (footer)) %>%
+  
+  
+  set_table_properties(layout = "autofit", width = 1) 
+  
+
+flex_ds_chem
+```
+
+
+```{r echo=FALSE}
+# Save flextable(s) as a .docx (Word) file
+save_as_docx(flex_ds_chem, # save these table(s)
+             path = "output/table 2.docx")
+
+save_as_docx(flex_ds_chem, # save these table(s)
+             path = paste0("output/ds/archive/table 2", "_",  Sys.Date(), ".docx", sep = ""))
+
+```
+
+```{r}
+
+```
+

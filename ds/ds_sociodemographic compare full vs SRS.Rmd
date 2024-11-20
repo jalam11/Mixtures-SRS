@@ -1,0 +1,413 @@
+---
+title: "ds_sociodemographic compare full vs SRS"
+author: "Josh Alampi"
+date: "2024-10-25"
+output: html_document
+---
+
+
+# load
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source("libraries.R", echo = T)
+source("functions/analysis functions.R")
+
+# Load MIREC data
+data_all <- read.csv("//ais-fs1.sfu.ca/home2/Redirected_Profiles/jalampi/Desktop/MIREC loader 2022/clean data/MIREC data_mixtures.csv") %>% 
+  filter(live.birth2 == 1 & num.babies3 == 1) %>% 
+  clean_data(mice_filter = F) 
+  
+data <- data_all %>% 
+  filter(is.na(srs) == F) 
+
+```
+
+# clean data
+
+## Edit 'data_no_srs' to only include participants without an SRS-score
+```{r}
+ids_with_srs <- data$subject.id
+ids_all <- data_all$subject.id
+
+ids_without_srs <- setdiff(ids_all, ids_with_srs)
+
+
+data_no_srs <- data_all %>% 
+  filter(subject.id %in% ids_without_srs)
+```
+
+
+
+## make new variable: home.score2 (binary variable) 
+```{r include=FALSE}
+median_home <- quantile(data$home.score, 0.5, na.rm = T)
+median_srs_age <- quantile(data$srs.age, 0.5)
+
+
+data <- data %>% 
+  mutate(home.score2 = ifelse(home.score >= median_home, 1, 0)) %>% # Make HOME score a binary variable
+  mutate(srs.age2 = ifelse(srs.age >= median_srs_age, 1, 0)) %>% # Make SRS age a binary variable
+  mutate(all = 1) # make a variable where all participants are coded as == 1. 
+
+data_no_srs <- data_no_srs %>% 
+  mutate(home.score2 = ifelse(home.score >= median_home, 1, 0)) %>% # Make HOME score a binary variable
+  mutate(srs.age2 = ifelse(srs.age >= median_srs_age, 1, 0)) %>% # Make SRS age a binary variable
+  mutate(all = 1) # make a variable where all participants are coded as == 1. 
+
+# prep for comparison of full and subset datasets
+data_no_srs$dataset <- "Full"
+data$dataset <- "Subset"
+
+# Combine the two datasets
+combined_data <- rbind(data_no_srs, data)
+```
+
+## Fix data_no_srs folate concentration variables
+```{r}
+# Calculate the folate percentiles based on the dataset used in the analysis (the ppl with SRS scores)
+tot_fol.t1_10 <- quantile(data$tot_fol.t1, 0.1, na.rm = T)
+tot_fol.t1_80 <- quantile(data$tot_fol.t1, 0.8, na.rm = T)
+umfa.t1_80 <- quantile(data$umfa.t1.res, 0.8, na.rm = T)
+
+# Ensure that the cutoffs used in the 'full' dataset are the same as the dataset used in the analysis
+data_no_srs <- data_no_srs %>% 
+  select(-c(pl_fol3.t1, umfa2.t1)) %>% 
+  dplyr::mutate(pl_fol3.t1 = case_when(tot_fol.t1 < tot_fol.t1_10 ~ 1,
+                                       tot_fol.t1 > tot_fol.t1_80 ~ 3,
+                                       is.na(tot_fol.t1) ~ NA,
+                                       .default = 2)) %>% # Between 10th and 80th %ile is assigned 2
+  dplyr::mutate(umfa2.t1 = ifelse(umfa.t1.res > umfa.t1_80,
+                                  1, # ppl w/ umfa conc. above 80th percentile assigned 1
+                                  0)) # otherwise they are assigned 2
+
+```
+
+# Check data
+```{r}
+summary(data_no_srs$all)
+summary(data_no_srs$sex2)
+summary(data_no_srs$living.status2)
+summary(data_no_srs$race.white2)
+summary(data_no_srs$edu4)
+summary(data_no_srs$income4)
+summary(data_no_srs$parity3)
+summary(data_no_srs$home.score2)
+summary(data_no_srs$smoker2)
+summary(data_no_srs$fish3)
+summary(data_no_srs$fol.intake3)
+summary(data_no_srs$pl_fol3.t1)
+summary(data_no_srs$umfa2.t1)
+
+```
+
+#make functions
+## desciptive statistics
+```{r include=FALSE}
+get_ds <- function(data, var, level, name, round = 1, roundchem = 2) {
+  tot_n <- nrow(data)
+  if(level == "NA"){
+    subset_data <- filter(data, is.na({{var}}) == T)
+  } else {
+    subset_data <- filter(data, {{var}} == {{level}})
+  }
+  
+  n <- nrow(subset_data)
+  perc <- format(round(n/tot_n*100, round), nsmall = round)
+  
+  srs_mean <- format(round(mean(subset_data$srs), round), nsmall = round)
+  srs_sd <-format(round(sd(subset_data$srs), round), nsmall = round)
+  
+  if(level == "NA"){
+    srs_mean <- paste0("")
+    srs_sd <-paste0("")
+    
+  }
+  
+  mat <- matrix(data=NA, nrow = 1, ncol = 3)
+  mat[1,1] <- ifelse(name == "All", 
+                     paste0(name),
+                     paste0("   ", name))
+  
+  mat[1,2] <- paste0(n, " (", perc, ")")
+  
+  mat[1,3] <- ifelse(level == "NA",
+                     paste0(""),
+                     paste0(srs_mean, " (", srs_sd, ")"))
+  
+  return(mat)
+}
+```
+
+test:
+```{r}
+get_ds(data, sex2, 0, "Male")
+```
+
+# make table1 (with SRS data)
+```{r include=FALSE}
+table1 <- setNames(data.frame(matrix(data = "", nrow = 49, ncol = 3)), #make dataframe
+                              c("Variable", "n (%)", "Mean SRS-2 score (SD)")) #set column names
+
+i <- 1
+
+table1[i,] <- get_ds(data, all, 1, "All"); i <- i + 1
+
+table1[i,1] <- "Child sex"; i <- i + 1
+table1[i,] <- get_ds(data, sex2, 0, "Male"); i <- i + 1
+table1[i,] <- get_ds(data, sex2, 1, "Female"); i <- i + 1
+table1[i,] <- get_ds(data, sex2, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "Maternal age at enrollment (years)"; i <- i + 1
+table1[i,] <- get_ds(data, mom.age3, 1, "18 - 29"); i <- i + 1
+table1[i,] <- get_ds(data, mom.age3, 2, "30 - 35"); i <- i + 1
+table1[i,] <- get_ds(data, mom.age3, 3, "≥36"); i <- i + 1
+
+table1[i,1] <- "Living with partner"; i <- i + 1
+table1[i,] <- get_ds(data, living.status2, 0, "Yes"); i <- i + 1
+table1[i,] <- get_ds(data, living.status2, 1, "No"); i <- i + 1
+
+table1[i,1] <- "Maternal race"; i <- i + 1
+table1[i,] <- get_ds(data, race.white2, 1, "White"); i <- i + 1
+table1[i,] <- get_ds(data, race.white2, 0, "Other"); i <- i + 1
+
+table1[i,1] <- "Education level"; i <- i + 1
+table1[i,] <- get_ds(data, edu4, 1, "High school or less"); i <- i + 1
+table1[i,] <- get_ds(data, edu4, 2, "College or trade school"); i <- i + 1
+table1[i,] <- get_ds(data, edu4, 3, "Undergraduate university degree"); i <- i + 1
+table1[i,] <- get_ds(data, edu4, 4, "Graduate university degree"); i <- i + 1
+table1[i,] <- get_ds(data, edu4, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "Annual household income ($CAD)"; i <- i + 1
+table1[i,] <- get_ds(data, income4, 1, "≤$40,000"); i <- i + 1
+table1[i,] <- get_ds(data, income4, 2, "$40,001 - $80,000"); i <- i + 1
+table1[i,] <- get_ds(data, income4, 3, "$80,001 - $100,000"); i <- i + 1
+table1[i,] <- get_ds(data, income4, 4, ">$100,000"); i <- i + 1
+table1[i,] <- get_ds(data, income4, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "Parity"; i <- i + 1
+table1[i,] <- get_ds(data, parity3, 1, "Nulliparous"); i <- i + 1
+table1[i,] <- get_ds(data, parity3, 2, "Uniparous"); i <- i + 1
+table1[i,] <- get_ds(data, parity3, 3, "Multiparous"); i <- i + 1
+
+table1[i,1] <- "HOME score"; i <- i + 1
+table1[i,] <- get_ds(data, home.score2, 1, "≥48 (median)"); i <- i + 1
+table1[i,] <- get_ds(data, home.score2, 0, "<48 (median)"); i <- i + 1
+table1[i,] <- get_ds(data, home.score2, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "Smoked during pregnancy"; i <- i + 1
+table1[i,] <- get_ds(data, smoker2, 1, "Yesᵃ"); i <- i + 1
+table1[i,] <- get_ds(data, smoker2, 0, "No"); i <- i + 1
+table1[i,] <- get_ds(data, smoker2, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "First trimester fish consumption"; i <- i + 1
+table1[i,] <- get_ds(data, fish3, 1, "0-2 times per month"); i <- i + 1
+table1[i,] <- get_ds(data, fish3, 2, "3-7 times per month"); i <- i + 1
+table1[i,] <- get_ds(data, fish3, 3, "≥8 times per month"); i <- i + 1
+table1[i,] <- get_ds(data, fish3, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "Folic acid supplementationᵇ"; i <- i + 1
+table1[i,] <- get_ds(data, fol.intake3, 1, "<400 µg per day"); i <- i + 1
+table1[i,] <- get_ds(data, fol.intake3, 2, "400 - 1000 µg per day"); i <- i + 1
+table1[i,] <- get_ds(data, fol.intake3, 3, ">1000 µg per day"); i <- i + 1
+
+table1[i,1] <- "Plasma total folate concentrationsᶜ"; i <- i + 1
+table1[i,] <- get_ds(data, pl_fol3.t1, 1, "<10ᵗʰ percentile (65.6 nmol/L)"); i <- i + 1
+table1[i,] <- get_ds(data, pl_fol3.t1, 2, "10ᵗʰ - 80ᵗʰ percentile"); i <- i + 1
+table1[i,] <- get_ds(data, pl_fol3.t1, 3, ">80ᵗʰ percentile (125 nmol/L)"); i <- i + 1
+table1[i,] <- get_ds(data, pl_fol3.t1, "NA", "Missing"); i <- i + 1
+
+table1[i,1] <- "Unmetabolized folic acid concentrations"; i <- i + 1
+table1[i,] <- get_ds(data, umfa2.t1, 0, "≤80ᵗʰ percentile"); i <- i + 1
+table1[i,] <- get_ds(data, umfa2.t1, 1, ">80ᵗʰ percentile (13.6 nmol/L)"); i <- i + 1
+table1[i,] <- get_ds(data, umfa2.t1, "NA", "Missing"); i <- i + 1
+
+i
+```
+
+# make table1s (with singleton live births)
+```{r include=FALSE}
+table1s <- setNames(data.frame(matrix(data = NA, nrow = 49, ncol = 4)), #make dataframe
+                    c("Variable", "n (%)", "Mean SRS-2 score (SD)", "p")) #set column names
+
+i <- 1
+
+table1s[i,1:3] <- get_ds(data_no_srs, all, 1, "All"); i <- i + 1
+
+table1s[i,1] <- "Child sex"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$sex2))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, sex2, 0, "Male"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, sex2, 1, "Female"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, sex2, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "Maternal age at enrollment (years)"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$mom.age3))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, mom.age3, 1, "18 - 29"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, mom.age3, 2, "30 - 35"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, mom.age3, 3, "≥36"); i <- i + 1
+
+table1s[i,1] <- "Living with partner"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$living.status2))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, living.status2, 0, "Yes"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, living.status2, 1, "No"); i <- i + 1
+
+table1s[i,1] <- "Maternal race"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$race.white2))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, race.white2, 1, "White"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, race.white2, 0, "Other"); i <- i + 1
+
+table1s[i,1] <- "Education level"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$edu4))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, edu4, 1, "High school or less"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, edu4, 2, "College or trade school"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, edu4, 3, "Undergraduate university degree"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, edu4, 4, "Graduate university degree"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, edu4, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "Annual household income ($CAD)"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$income4))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, income4, 1, "≤$40,000"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, income4, 2, "$40,001 - $80,000"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, income4, 3, "$80,001 - $100,000"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, income4, 4, ">$100,000"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, income4, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "Parity"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$parity3))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, parity3, 1, "Nulliparous"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, parity3, 2, "Uniparous"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, parity3, 3, "Multiparous"); i <- i + 1
+
+table1s[i,1] <- "HOME score"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$home.score2))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, home.score2, 1, "≥48 (median)"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, home.score2, 0, "<48 (median)"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, home.score2, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "Smoked during pregnancy"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$smoker2))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, smoker2, 1, "Yesᵃ"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, smoker2, 0, "No"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, smoker2, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "First trimester fish consumption"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$fish3))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fish3, 1, "0-2 times per month"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fish3, 2, "3-7 times per month"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fish3, 3, "≥8 times per month"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fish3, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "Folic acid supplementationᵇ"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$fol.intake3))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fol.intake3, 1, "<400 µg per day"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fol.intake3, 2, "400 - 1000 µg per day"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, fol.intake3, 3, ">1000 µg per day"); i <- i + 1
+
+table1s[i,1] <- "Plasma total folate concentrationsᶜ"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$pl_fol3.t1))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, pl_fol3.t1, 1, "<10ᵗʰ percentile (65.6 nmol/L)"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, pl_fol3.t1, 2, "10ᵗʰ - 80ᵗʰ percentile"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, pl_fol3.t1, 3, ">80ᵗʰ percentile (125 nmol/L)"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, pl_fol3.t1, "NA", "Missing"); i <- i + 1
+
+table1s[i,1] <- "Unmetabolized folic acid concentrations"
+table1s[i,4] <- chisq.test(table(combined_data$dataset, combined_data$umfa2.t1))$p.value; i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, umfa2.t1, 0, "≤80ᵗʰ percentile"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, umfa2.t1, 1, ">80ᵗʰ percentile (13.6 nmol/L)"); i <- i + 1
+table1s[i,1:3] <- get_ds(data_no_srs, umfa2.t1, "NA", "Missing")
+
+i
+
+```
+
+## Round p-values
+```{r}
+table1s <- table1s %>% 
+  mutate(formatted_p = case_when(
+    p <= 0.99 & p > 0.05 ~ format(round(p, 2), nsmall = 2),
+    p <= 0.05 & p >= 0.01 ~ paste0(format(round(p, 2), nsmall = 2), "*"),
+    p < 0.01 & p >= 0.001 ~ paste0(format(round(p, 3), nsmall = 3), "*"),
+    p < 0.001 ~ "p < .001*"))
+```
+
+
+## put them together
+Only need to report n and %. Since the mean SRS score will be the same for the both groups, I will not report it in this table. (once I remove all of the people who are NA for the SRS variable in the "full" n=1862 dataset, I am left with the same 601 participants who are in the "SRS-only" dataset) 
+```{r}
+# merge
+table_all <- cbind(table1[,1:2], table1s[,c(2,5)])
+
+# fix column names
+colnames(table_all)[2] <- "Study sample (mother-child pairs with an SRS-2 score)_n (%)"
+colnames(table_all)[3] <- "Full sample (singleton live births) without an SRS-2 score_n (%)"
+colnames(table_all)[4] <- "p"
+
+# Fix some labels
+table_all[50,1] <- "   <65.6 nmol/L"
+table_all[51,1] <- "   ≥65.6 nmol/L & ≤125 nmol/L"
+table_all[52,1] <- "   >125 nmol/L"
+table_all[55,1] <- "   ≤13.6 nmol/L"
+table_all[56,1] <- "   >13.6 nmol/L"
+
+table_all[54,1] <- "Unmetabolized folic acid concentrationsᵈ" # add a "c" superscript
+```
+
+
+
+
+# Make flextables
+
+```{r}
+
+title_table1s <- "Table S1. Comparison of study and full sample's sociodemographic characteristics, MIREC study, Canada, 2008-11."
+
+footer_table1s <- "*: Denotes a Chi-square (comparing the study and full sample) test P-value less than 0.05. All P-values are two-sided.\n a: Includes current smokers and individuals who quit during pregnancy. 'Non-smoker' includes participants who did not smoke and former smokers. \n b: Folic acid supplementation was primarily measured via a survey conducted at 16 weeks gestation, which queried intake in the past 30 days. We also used data from the 24-hour recall version of this survey and a questionnaire completed at study enrollment (6-13 weeks gestation). \n c: Sum of 5-formyl-THF, 5-10-methylene-THF, THF, UMFA, 5-methyl-THF. 65.6 nmol/L and 125 nmol/L are the 10th and 80th percentiles of plasma total folate concentrations in the study sample. \n d: 13.6 nmol/L is the 80th percentile of unmetabolized folic acid concentrations in the study sample. \nAbbreviations: CAD, Canadian dollar; HOME, Home Observation for Measurement of the Environment; MIREC, Maternal-Infant Research on Environmental Chemicals Study; SD, Standard Deviation; SRS, Social Responsiveness Scale."
+
+```
+
+
+
+# Table 1s
+```{r}
+flextable_table1s <- table_all %>% 
+  flextable() %>% 
+  separate_header() %>% 
+  add_header_lines(title_table1s) %>% 
+  add_footer_lines(footer_table1s) %>% 
+  
+  # align header
+  align(align = "center", part = "header") %>%
+  align(align = "left", part = "header", j = 1) %>%
+  
+  set_table_properties(layout = "autofit", width = 1)
+
+flextable_table1s
+```
+
+
+# Save
+
+# Save table as a MS excel file
+```{r}
+write_xlsx(table_all, here::here("output", "ds", "ds_sociodemographics_compare_.xlsx"))
+
+file_name <- paste0("ds_sociodemographics_compare_", Sys.Date(), ".xlsx")
+write_xlsx(table_all, here::here("output", "ds", "archive", file_name)) # for archival purposes
+```
+
+## Save flextable as a word document
+```{r echo=FALSE}
+# Save flextable(s) as a .docx (Word) file
+save_as_docx(flextable_table1s, # save these table(s)
+             path = "output/table S_comparison.docx")
+
+save_as_docx(flextable_table1s, # save these table(s)
+             path = paste0("output/ds/archive/table S_comparison.", "_",  Sys.Date(), ".docx", sep = ""))
+```
+
+```{r}
+
+```
+

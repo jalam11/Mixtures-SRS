@@ -1,0 +1,235 @@
+---
+title: "fig_mixture results"
+author: "Josh Alampi"
+date: "2023-12-21"
+output: html_document
+---
+
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source(here::here("libraries.R"))
+source("functions/ggplot functions.R")
+source("functions/analysis functions.R")
+
+pvalue_rounder <- function(p) 
+{
+  require(dplyr)
+  formatted_p <- case_when(
+    p > 0.99 ~ "p-int.>.99", # for P values greater than .99, report as "P>.99."
+    p <= 0.99 & p > 0.05 ~ paste0("p-int.=", (format(round(p, 2), nsmall = 2))), # or P values greater than or equal to .01, report the value to the nearest hundredth
+    p <= 0.05 & p >= 0.01 ~ paste0("p-int.=", format(round(p, 2), nsmall = 2), "*"),
+    p < 0.01 & p >= 0.001 ~ paste0("p-int.=", format(round(p, 3), nsmall = 3), "*"), # for P values between .001 and .01, report the value to the nearest thousandth;
+    p < 0.001 ~ "p.int<.001*" # for P values less than .001, report as "P<.001"
+  )
+  
+  return(formatted_p)
+}
+
+
+# load results
+main <- read.csv("output/analysis/raw res_qgcomp.csv")
+int <- read.csv("output/analysis/raw res_qgcomp_int.csv") 
+
+mod_var_names <- c("FA supplementation", "Plasma total folate conc.", "Child sex", "Unmetabolized folic acid")
+
+
+```
+
+# cleaning
+```{r}
+
+
+main <- main %>% 
+  mutate(mixture_name = factor(mixture_name, c("Metals", "OC Pesticides", "PFAS", "PCBs", "All POPs")))
+
+int <- int %>% 
+  mutate(clean_p = ifelse(is.na(p_int),
+                              "ref.",
+                               pvalue_rounder(p_int))) %>% 
+  mutate(mod_var = case_when(mod_var == "fol.intake3" ~ mod_var_names[1],
+                             mod_var == "pl_fol3.t1" ~ mod_var_names[2],
+                             mod_var == "sex2" ~ mod_var_names[3],
+                             mod_var == "umfa2.t1" ~ mod_var_names[4])) %>% 
+  mutate(mixture_name = factor(mixture_name, c("Metals", "OC Pesticides", "PFAS", "PCBs", "All POPs"))) 
+
+main$mixture_name <- main$mixture_name %>% 
+  plyr::mapvalues("Metals", "Metalsᵇ") %>% 
+  plyr::mapvalues("OC Pesticides", "OC Pesticidesᶜ") %>% 
+  plyr::mapvalues("PFAS", "PFASᵈ") %>% 
+  plyr::mapvalues("PCBs", "PCBsᵉ") %>% 
+  plyr::mapvalues("All POPs", "All POPsᶠ") 
+
+int$mixture_name <- int$mixture_name %>% 
+  plyr::mapvalues("Metals", "Metalsᵇ") %>% 
+  plyr::mapvalues("OC Pesticides", "OC Pesticidesᶜ") %>% 
+  plyr::mapvalues("PFAS", "PFASᵈ") %>% 
+  plyr::mapvalues("PCBs", "PCBsᵉ") %>% 
+  plyr::mapvalues("All POPs", "All POPsᶠ") 
+
+# Create datasets for each modifying variable, fix the level names
+int_fa <- int %>%
+  filter(mod_var == mod_var_names[1]) %>% 
+  mutate(mod_level = factor(mod_level, c("<400", "400-1000", ">1000")))
+
+# int_fa$mod_level <- int_fa$mod_level %>% 
+#   mapvalues(1, "<400") %>% 
+#   mapvalues(2, "400-1000") %>% 
+#   mapvalues(3, ">1000") 
+
+int_plfol <- int %>%
+  filter(mod_var == mod_var_names[2]) %>% 
+  mutate(mod_level = factor(mod_level, c("<10th %ile", "10th-80th %ile", ">80th %ile")))
+
+
+# int_plfol$mod_level <- int_plfol$mod_level %>% 
+#   mapvalues(1, "<10ᵗʰ %ile") %>% 
+#   mapvalues(2, "10ᵗʰ-80ᵗʰ %ile") %>% 
+#   mapvalues(3, ">80ᵗʰ %ile") 
+
+int_sex <- int %>%
+  filter(mod_var == mod_var_names[3]) %>% 
+  mutate(mod_level = factor(mod_level, c("Male", "Female")))
+
+# int_sex$mod_level <- int_sex$mod_level %>% 
+#   mapvalues(0, "Male") %>% 
+#   mapvalues(1, "Female") 
+
+int_umfa <- int %>% 
+  filter(mod_var == mod_var_names[4]) 
+
+int_umfa$mod_level <- int_umfa$mod_level %>% # Add some spaces to the variable names to improve readablility
+  mapvalues("≤80th %ile", "≤80th %ile   ") %>% 
+  mapvalues(">80th %ile", "   >80th %ile")
+
+int_umfa <- int_umfa %>% 
+  mutate(mod_level = factor(mod_level, c("≤80th %ile   ", "   >80th %ile")))
+
+```
+
+# Make figs
+## colours
+```{r}
+display.brewer.pal(n = 9, name = 'Blues')
+# display.brewer.pal(n = 7, name = 'Greys')
+
+cols_folate <- brewer.pal("Blues", n = 9)[c(4, 6, 8)]
+cols_umfa <- brewer.pal("Blues", n = 9)[c(5, 8)]
+cols_sex <- brewer.pal("Blues", n = 9)[c(4, 8)]
+```
+
+## labels
+```{r}
+# xlabs
+xlab_fa <- "Folic acid supplementation, μg/dayᵍ"
+xlab_plfol <- "Plasma total folate concentrationsʰ"
+# xlab_plfol_unit <- "Plasma total folate concentrations (nmol/L)"
+xlab_sex <- "Child sex"
+xlab_umfa <- "Plasma unmetabolized folic acid concentrations"
+
+# ylabs
+ylab <- "Ψ (95% CI): Difference in SRS per one-quartile increase in mixtureᵃ"
+ylab_blank <- ""
+
+# titles
+# title_a <- "A) Quantile g-computation in full sample"
+title_a <- "A) Mixture versus SRS-2 associations by child sexᵍ"
+title_b <- "B) Mixture versus SRS-2 associations by folic acid supplementationʰ"
+title_c <- "C) Mixture versus SRS-2 associations by plasma total folate concentrationᶦ"
+title_d <- "D) Mixture versus SRS-2 associations by plasma unmetabolized folic acid concentrations"
+```
+
+# Main analysis
+```{r}
+t_major = 8
+t_minor = 7
+size_signif = 2.5
+x_angle = 345
+
+fig_main <- main %>% 
+  mutate(blank = 0) %>% 
+  ggplot() + 
+  
+  # mapping
+  geom_hline(yintercept = 0, lty = 5, linewidth = 0.5, alpha = 0.3) +
+  geom_pointrange(aes(x = blank, y = psi, ymin = lb, ymax = ub)) +
+  
+  #organize
+  facet_grid(. ~ mixture_name, scales = "free_y") +
+
+  #aesthetic
+  gg_aesthetic(yint = NULL) + # Removing the y-intercept that comes with this function because I added it manually above) +
+  labs(y = ylab) +
+  gg_legend(position = "none") + # modify legend
+
+  # tweaks
+  gg_text(t_minor, t_major, x_angle = x_angle, x_axis_rm = T, title_hjust = 0) 
+# +
+#   gg_coord(breaks = c(-6, -4, -2, 0, 2, 4, 6), limits = c(-6, 7))
+
+fig_main
+```
+
+# interaction
+```{r}
+ggplot_int <- function(.data, xlab, ylab, title, colour,
+                       t_major = 9, t_minor = 8, size_signif = 2.25, x_angle = 360, text_angle = 360) {
+  
+  fig <- .data %>% 
+    ggplot() + 
+    
+    # mapping
+    geom_hline(yintercept = 0, lty = 5, linewidth = 0.5, alpha = 0.3) +
+    geom_pointrange(aes(x = mod_level, y = psi, ymin = lb, ymax = ub, colour = mod_level)) +
+    geom_text(aes(x = mod_level, y = ub, label = clean_p, angle = text_angle), size = size_signif) +
+    
+    #organize
+    facet_grid(. ~ mixture_name, scales = "free_y") +
+  
+    #aesthetic
+    gg_aesthetic(yint = NULL, # Removing the y-intercept that comes with this function because I added it manually above
+                 panel.spacing.x = 0.00001,
+                 colour_vec = colour) +
+    labs(x = xlab, y = ylab, title = title) +
+    gg_legend(position = "none") + # modify legend
+  
+    # tweaks
+    gg_text(t_minor, t_major, x_angle = x_angle, title_hjust = 0)
+  # +
+  #   gg_coord(breaks = c(-6, -4, -2, 0, 2, 4, 6), limits = c(-6, 7))
+  
+  return(fig)
+}
+
+(fig_sex <- ggplot_int(int_sex, xlab_sex, ylab_blank, title_a, colour = cols_sex))
+(fig_fa <- ggplot_int(int_fa, xlab_fa, ylab_blank, title_b, x_angle = 340, colour = cols_folate))
+(fig_plfol <- ggplot_int(int_plfol, xlab_plfol, ylab_blank, title_c, x_angle = 340, colour = cols_folate))
+(fig_umfa <- ggplot_int(int_umfa, xlab_umfa, ylab_blank, title_d, colour = cols_umfa))
+```
+
+
+```{r}
+fig_int <- ggarrange(fig_sex, fig_fa, fig_plfol, fig_umfa,
+                     nrow = 4, heights = c(7, 10, 10, 8)) 
+# Some figures take up less space because the x-axis labels are not as long
+
+fig_int <- fig_int %>% 
+  annotate_figure(left = text_grob(ylab, rot = 90, size = 9, vjust = 3))
+
+fig_int
+```
+
+# Save
+```{r}
+my_ggsave(fig_main, path = "output/", file_name = "fig_main", archive_path = "analysis/archive/", height = 4)
+my_ggsave(fig_int, path = "output/", file_name = "fig_int", archive_path = "analysis/archive/", height = 9)
+
+```
+
+```{r}
+
+```
+
+
