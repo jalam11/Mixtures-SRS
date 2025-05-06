@@ -1,0 +1,271 @@
+"name","mixture_name","mod_var_name","mod_level","ave_weight"
+"arsenic.t1.res","Metals","fol.intake3",1,0.365708682355407
+"arsenic.t1.res","Metals","fol.intake3",2,-0.331769826511423
+"arsenic.t1.res","Metals","fol.intake3",3,0.168920855594398
+"cadmium.t1.res","Metals","fol.intake3",1,-0.55068786665588
+"cadmium.t1.res","Metals","fol.intake3",2,0.477435499807918
+"cadmium.t1.res","Metals","fol.intake3",3,0.0887273684815865
+"lead.t1.res","Metals","fol.intake3",1,0.634291317644593
+"lead.t1.res","Metals","fol.intake3",2,0.522564500192082
+"lead.t1.res","Metals","fol.intake3",3,0.409965767690623
+"mercury.t1.res","Metals","fol.intake3",1,-0.44931213334412
+"mercury.t1.res","Metals","fol.intake3",2,-0.668230173488577
+"mercury.t1.res","Metals","fol.intake3",3,0.332386008233393
+"bbhc.t1.res","OC Pesticides","fol.intake3",1,-0.169287697075689
+"bbhc.t1.res","OC Pesticides","fol.intake3",2,-0.0137677673288007
+"bbhc.t1.res","OC Pesticides","fol.intake3",3,0.288665423323634
+"dde.t1.res","OC Pesticides","fol.intake3",1,0.849742213981014
+"dde.t1.res","OC Pesticides","fol.intake3",2,0.20315120847723
+"dde.t1.res","OC Pesticides","fol.intake3",3,0.692904854633569
+"oxychlor.t1.res","OC Pesticides","fol.intake3",1,0.150257786018986
+"oxychlor.t1.res","OC Pesticides","fol.intake3",2,-0.869598906729045
+"oxychlor.t1.res","OC Pesticides","fol.intake3",3,-0.134233317998985
+"transnona.t1.res","OC Pesticides","fol.intake3",1,-0.830712302924311
+"transnona.t1.res","OC Pesticides","fol.intake3",2,0.680215465580616
+"transnona.t1.res","OC Pesticides","fol.intake3",3,-0.847336959958218
+"pfhxs.t1.res","PFAS","fol.intake3",1,-0.262259648684937
+"pfhxs.t1.res","PFAS","fol.intake3",2,1
+"pfhxs.t1.res","PFAS","fol.intake3",3,0.560839544182205
+"pfos.t1.res","PFAS","fol.intake3",1,1
+"pfos.t1.res","PFAS","fol.intake3",2,-0.72946082310522
+"pfos.t1.res","PFAS","fol.intake3",3,-0.958350463766257
+"pfoa.t1.res","PFAS","fol.intake3",1,-0.737740351315063
+"pfoa.t1.res","PFAS","fol.intake3",2,-0.27053917689478
+"pfoa.t1.res","PFAS","fol.intake3",3,0.197510919584053
+"pcb118.t1.res","PCBs","fol.intake3",1,0.145565619071625
+"pcb118.t1.res","PCBs","fol.intake3",2,-0.646049989805391
+"pcb118.t1.res","PCBs","fol.intake3",3,0.218236212942751
+"pcb138.t1.res","PCBs","fol.intake3",1,-0.488995536878032
+"pcb138.t1.res","PCBs","fol.intake3",2,0.908695808425999
+"pcb138.t1.res","PCBs","fol.intake3",3,-0.447456533067808
+"pcb153.t1.res","PCBs","fol.intake3",1,0.854434380928375
+"pcb153.t1.res","PCBs","fol.intake3",2,-0.0456752948600085
+"pcb153.t1.res","PCBs","fol.intake3",3,0.781763787057249
+"pcb180.t1.res","PCBs","fol.intake3",1,-0.511004463121968
+"pcb180.t1.res","PCBs","fol.intake3",2,-0.2169705237606
+"pcb180.t1.res","PCBs","fol.intake3",3,-0.552543466932192
+"bbhc.t1.res","All POPs","fol.intake3",1,0.0289203802495348
+"bbhc.t1.res","All POPs","fol.intake3",2,0.0392606601347768
+"bbhc.t1.res","All POPs","fol.intake3",3,-0.0604814257343809
+"dde.t1.res","All POPs","fol.intake3",1,-0.177695073300146
+"dde.t1.res","All POPs","fol.intake3",2,-0.0214244719552181
+"dde.t1.res","All POPs","fol.intake3",3,-0.0431244623812107
+"oxychlor.t1.res","All POPs","fol.intake3",1,-0.143261425014187
+"oxychlor.t1.res","All POPs","fol.intake3",2,-0.182094054387379
+"oxychlor.t1.res","All POPs","fol.intake3",3,-0.0180050815128666
+"transnona.t1.res","All POPs","fol.intake3",1,-0.187580742939651
+"transnona.t1.res","All POPs","fol.intake3",2,0.101088403374356
+"transnona.t1.res","All POPs","fol.intake3",3,-0.202963662332596
+"pfhxs.t1.res","All POPs","fol.intake3",1,-0.113736689677588
+"pfhxs.t1.res","All POPs","fol.intake3",2,0.261012739430243
+"pfhxs.t1.res","All POPs","fol.intake3",3,0.105375603109296
+"pfos.t1.res","All POPs","fol.intake3",1,0.156034916583114
+"pfos.t1.res","All POPs","fol.intake3",2,-0.358387282815084
+"pfos.t1.res","All POPs","fol.intake3",3,-0.18915947929882
+"pfoa.t1.res","All POPs","fol.intake3",1,0.0221323467274127
+"pfoa.t1.res","All POPs","fol.intake3",2,-0.122352725418879
+"pfoa.t1.res","All POPs","fol.intake3",3,-0.0464858738173231
+"pcb118.t1.res","All POPs","fol.intake3",1,0.0557349932087699
+"pcb118.t1.res","All POPs","fol.intake3",2,-0.16851379805998
+"pcb118.t1.res","All POPs","fol.intake3",3,0.179954221554261
+"pcb138.t1.res","All POPs","fol.intake3",1,-0.328169470043245
+"pcb138.t1.res","All POPs","fol.intake3",2,0.422562283795185
+"pcb138.t1.res","All POPs","fol.intake3",3,-0.145592431487306
+"pcb153.t1.res","All POPs","fol.intake3",1,0.570930388877915
+"pcb153.t1.res","All POPs","fol.intake3",2,-0.0331322373334107
+"pcb153.t1.res","All POPs","fol.intake3",3,0.604792650757078
+"pcb180.t1.res","All POPs","fol.intake3",1,-0.0491407190553898
+"pcb180.t1.res","All POPs","fol.intake3",2,-0.0691477357918201
+"pcb180.t1.res","All POPs","fol.intake3",3,-0.282959839068674
+"bde47.t1.res","All POPs","fol.intake3",1,0.165831094383461
+"bde47.t1.res","All POPs","fol.intake3",2,0.13112821902721
+"bde47.t1.res","All POPs","fol.intake3",3,0.0986497802125419
+"arsenic.t1.res","Metals","pl_fol3.t1",1,0.0635983568653348
+"arsenic.t1.res","Metals","pl_fol3.t1",2,-0.132416546018997
+"arsenic.t1.res","Metals","pl_fol3.t1",3,-0.576998535988626
+"cadmium.t1.res","Metals","pl_fol3.t1",1,-0.391264896675053
+"cadmium.t1.res","Metals","pl_fol3.t1",2,0.125813191225091
+"cadmium.t1.res","Metals","pl_fol3.t1",3,0.487519594694645
+"lead.t1.res","Metals","pl_fol3.t1",1,0.919730831116956
+"lead.t1.res","Metals","pl_fol3.t1",2,0.813839570309683
+"lead.t1.res","Metals","pl_fol3.t1",3,0.437571945763816
+"mercury.t1.res","Metals","pl_fol3.t1",1,-0.592064291307238
+"mercury.t1.res","Metals","pl_fol3.t1",2,-0.807236215515777
+"mercury.t1.res","Metals","pl_fol3.t1",3,-0.148093004469835
+"bbhc.t1.res","OC Pesticides","pl_fol3.t1",1,-0.180774008644592
+"bbhc.t1.res","OC Pesticides","pl_fol3.t1",2,0.0175675398003717
+"bbhc.t1.res","OC Pesticides","pl_fol3.t1",3,0.402348984440659
+"dde.t1.res","OC Pesticides","pl_fol3.t1",1,0.247909340365332
+"dde.t1.res","OC Pesticides","pl_fol3.t1",2,0.899531755125344
+"dde.t1.res","OC Pesticides","pl_fol3.t1",3,-0.864663099474814
+"oxychlor.t1.res","OC Pesticides","pl_fol3.t1",1,-0.819225991355408
+"oxychlor.t1.res","OC Pesticides","pl_fol3.t1",2,-0.667213591384796
+"oxychlor.t1.res","OC Pesticides","pl_fol3.t1",3,0.581637056967599
+"transnona.t1.res","OC Pesticides","pl_fol3.t1",1,0.752090659634668
+"transnona.t1.res","OC Pesticides","pl_fol3.t1",2,-0.24988570354092
+"transnona.t1.res","OC Pesticides","pl_fol3.t1",3,-0.119322941933445
+"pfhxs.t1.res","PFAS","pl_fol3.t1",1,-0.809365836563134
+"pfhxs.t1.res","PFAS","pl_fol3.t1",2,1
+"pfhxs.t1.res","PFAS","pl_fol3.t1",3,0.868012115258333
+"pfos.t1.res","PFAS","pl_fol3.t1",1,0.99714175985625
+"pfos.t1.res","PFAS","pl_fol3.t1",2,-0.663868039609984
+"pfos.t1.res","PFAS","pl_fol3.t1",3,-0.899862146459402
+"pfoa.t1.res","PFAS","pl_fol3.t1",1,-0.187775923293116
+"pfoa.t1.res","PFAS","pl_fol3.t1",2,-0.336131960390016
+"pfoa.t1.res","PFAS","pl_fol3.t1",3,0.0318500312010696
+"pcb118.t1.res","PCBs","pl_fol3.t1",1,-0.250489849513651
+"pcb118.t1.res","PCBs","pl_fol3.t1",2,-0.270502452953618
+"pcb118.t1.res","PCBs","pl_fol3.t1",3,0.028195195173993
+"pcb138.t1.res","PCBs","pl_fol3.t1",1,-0.386753663484456
+"pcb138.t1.res","PCBs","pl_fol3.t1",2,0.56860109928976
+"pcb138.t1.res","PCBs","pl_fol3.t1",3,0.713965787510835
+"pcb153.t1.res","PCBs","pl_fol3.t1",1,1
+"pcb153.t1.res","PCBs","pl_fol3.t1",2,0.43139890071024
+"pcb153.t1.res","PCBs","pl_fol3.t1",3,-0.344991386509556
+"pcb180.t1.res","PCBs","pl_fol3.t1",1,-0.362756487001892
+"pcb180.t1.res","PCBs","pl_fol3.t1",2,-0.729497547046382
+"pcb180.t1.res","PCBs","pl_fol3.t1",3,-0.397169596175271
+"bbhc.t1.res","All POPs","pl_fol3.t1",1,-0.071030959946489
+"bbhc.t1.res","All POPs","pl_fol3.t1",2,-0.0355577230656706
+"bbhc.t1.res","All POPs","pl_fol3.t1",3,0.132224079479426
+"dde.t1.res","All POPs","pl_fol3.t1",1,-0.0218292118376014
+"dde.t1.res","All POPs","pl_fol3.t1",2,0.0365972161010008
+"dde.t1.res","All POPs","pl_fol3.t1",3,-0.219819609551497
+"oxychlor.t1.res","All POPs","pl_fol3.t1",1,-0.434195956753925
+"oxychlor.t1.res","All POPs","pl_fol3.t1",2,-0.240899880468859
+"oxychlor.t1.res","All POPs","pl_fol3.t1",3,0.270279696412624
+"transnona.t1.res","All POPs","pl_fol3.t1",1,0.39942543011555
+"transnona.t1.res","All POPs","pl_fol3.t1",2,-0.191905968880567
+"transnona.t1.res","All POPs","pl_fol3.t1",3,-0.0137229369755368
+"pfhxs.t1.res","All POPs","pl_fol3.t1",1,-0.148800375689711
+"pfhxs.t1.res","All POPs","pl_fol3.t1",2,0.292234852687376
+"pfhxs.t1.res","All POPs","pl_fol3.t1",3,0.106550937273081
+"pfos.t1.res","All POPs","pl_fol3.t1",1,0.0379081455825582
+"pfos.t1.res","All POPs","pl_fol3.t1",2,-0.275198825462694
+"pfos.t1.res","All POPs","pl_fol3.t1",3,-0.382814912970277
+"pfoa.t1.res","All POPs","pl_fol3.t1",1,-0.0220432939017727
+"pfoa.t1.res","All POPs","pl_fol3.t1",2,-0.1279581889759
+"pfoa.t1.res","All POPs","pl_fol3.t1",3,-0.0455571214824443
+"pcb118.t1.res","All POPs","pl_fol3.t1",1,-0.167625254446016
+"pcb118.t1.res","All POPs","pl_fol3.t1",2,-0.00658449063388191
+"pcb118.t1.res","All POPs","pl_fol3.t1",3,0.1560532715798
+"pcb138.t1.res","All POPs","pl_fol3.t1",1,-0.000268199982067709
+"pcb138.t1.res","All POPs","pl_fol3.t1",2,0.301554865937431
+"pcb138.t1.res","All POPs","pl_fol3.t1",3,0.260463755642714
+"pcb153.t1.res","All POPs","pl_fol3.t1",1,0.281421261636414
+"pcb153.t1.res","All POPs","pl_fol3.t1",2,0.189739199363191
+"pcb153.t1.res","All POPs","pl_fol3.t1",3,0.0207174013280171
+"pcb180.t1.res","All POPs","pl_fol3.t1",1,-0.0877208541109154
+"pcb180.t1.res","All POPs","pl_fol3.t1",2,-0.0858559624475674
+"pcb180.t1.res","All POPs","pl_fol3.t1",3,-0.179972609412305
+"bde47.t1.res","All POPs","pl_fol3.t1",1,0.234759269333978
+"bde47.t1.res","All POPs","pl_fol3.t1",2,0.143834905846141
+"bde47.t1.res","All POPs","pl_fol3.t1",3,-0.104401951323601
+"arsenic.t1.res","Metals","sex2",0,0.143267292114835
+"arsenic.t1.res","Metals","sex2",1,-0.278773596105275
+"cadmium.t1.res","Metals","sex2",0,-0.00263661116643548
+"cadmium.t1.res","Metals","sex2",1,0.427682426151624
+"lead.t1.res","Metals","sex2",0,0.715032526594928
+"lead.t1.res","Metals","sex2",1,0.572317573848376
+"mercury.t1.res","Metals","sex2",0,-0.155663207543328
+"mercury.t1.res","Metals","sex2",1,-0.721226403894725
+"bbhc.t1.res","OC Pesticides","sex2",0,0.188438315701627
+"bbhc.t1.res","OC Pesticides","sex2",1,-0.284889044793875
+"dde.t1.res","OC Pesticides","sex2",0,0.804921051058039
+"dde.t1.res","OC Pesticides","sex2",1,-0.566693328656045
+"oxychlor.t1.res","OC Pesticides","sex2",0,-0.464232835302151
+"oxychlor.t1.res","OC Pesticides","sex2",1,-0.112848015425217
+"transnona.t1.res","OC Pesticides","sex2",0,-0.529126531457515
+"transnona.t1.res","OC Pesticides","sex2",1,0.964430388875136
+"pfhxs.t1.res","PFAS","sex2",0,1
+"pfhxs.t1.res","PFAS","sex2",1,1
+"pfos.t1.res","PFAS","sex2",0,-0.595285183745204
+"pfos.t1.res","PFAS","sex2",1,-0.703097747536856
+"pfoa.t1.res","PFAS","sex2",0,-0.404714816254796
+"pfoa.t1.res","PFAS","sex2",1,-0.296902252463144
+"pcb118.t1.res","PCBs","sex2",0,-0.216974768210851
+"pcb118.t1.res","PCBs","sex2",1,-0.452266405147615
+"pcb138.t1.res","PCBs","sex2",0,0.185391171028253
+"pcb138.t1.res","PCBs","sex2",1,0.480961186026754
+"pcb153.t1.res","PCBs","sex2",0,0.814608828971747
+"pcb153.t1.res","PCBs","sex2",1,-0.494440558695859
+"pcb180.t1.res","PCBs","sex2",0,-0.783025231789149
+"pcb180.t1.res","PCBs","sex2",1,0.46574577781672
+"bbhc.t1.res","All POPs","sex2",0,0.0640978583824516
+"bbhc.t1.res","All POPs","sex2",1,-0.0989985030385081
+"dde.t1.res","All POPs","sex2",0,0.115185096736364
+"dde.t1.res","All POPs","sex2",1,-0.234154897551162
+"oxychlor.t1.res","All POPs","sex2",0,-0.145754889790799
+"oxychlor.t1.res","All POPs","sex2",1,-0.0409782389520687
+"transnona.t1.res","All POPs","sex2",0,-0.277663165629043
+"transnona.t1.res","All POPs","sex2",1,0.267134081036484
+"pfhxs.t1.res","All POPs","sex2",0,0.125646391301652
+"pfhxs.t1.res","All POPs","sex2",1,0.175238435041423
+"pfos.t1.res","All POPs","sex2",0,-0.146929527025007
+"pfos.t1.res","All POPs","sex2",1,-0.276320042611552
+"pfoa.t1.res","All POPs","sex2",0,-0.144735049896915
+"pfoa.t1.res","All POPs","sex2",1,-0.0728036229344236
+"pcb118.t1.res","All POPs","sex2",0,0.0370465573393618
+"pcb118.t1.res","All POPs","sex2",1,-0.0757437507838179
+"pcb138.t1.res","All POPs","sex2",0,0.0334812188056382
+"pcb138.t1.res","All POPs","sex2",1,0.370248087785097
+"pcb153.t1.res","All POPs","sex2",0,0.457835507881633
+"pcb153.t1.res","All POPs","sex2",1,-0.194547097931816
+"pcb180.t1.res","All POPs","sex2",0,-0.272831423070466
+"pcb180.t1.res","All POPs","sex2",1,0.0877514721645301
+"bde47.t1.res","All POPs","sex2",0,0.15462142496513
+"bde47.t1.res","All POPs","sex2",1,0.0931740777758131
+"arsenic.t1.res","Metals","umfa2.t1",0,-0.312891950621473
+"arsenic.t1.res","Metals","umfa2.t1",1,0.245599284187309
+"cadmium.t1.res","Metals","umfa2.t1",0,0.200359924720432
+"cadmium.t1.res","Metals","umfa2.t1",1,0.151497252040217
+"lead.t1.res","Metals","umfa2.t1",0,0.799640075279568
+"lead.t1.res","Metals","umfa2.t1",1,0.38458928044609
+"mercury.t1.res","Metals","umfa2.t1",0,-0.687108049378527
+"mercury.t1.res","Metals","umfa2.t1",1,0.218314183326384
+"bbhc.t1.res","OC Pesticides","umfa2.t1",0,-0.0716664450199824
+"bbhc.t1.res","OC Pesticides","umfa2.t1",1,0.254290763413909
+"dde.t1.res","OC Pesticides","umfa2.t1",0,0.850211665783089
+"dde.t1.res","OC Pesticides","umfa2.t1",1,0.424359839697627
+"oxychlor.t1.res","OC Pesticides","umfa2.t1",0,-0.6065254286215
+"oxychlor.t1.res","OC Pesticides","umfa2.t1",1,-1
+"transnona.t1.res","OC Pesticides","umfa2.t1",0,-0.172019792141607
+"transnona.t1.res","OC Pesticides","umfa2.t1",1,0.321349396888464
+"pfhxs.t1.res","PFAS","umfa2.t1",0,1
+"pfhxs.t1.res","PFAS","umfa2.t1",1,0.897544467671783
+"pfos.t1.res","PFAS","umfa2.t1",0,-0.677322650947668
+"pfos.t1.res","PFAS","umfa2.t1",1,-0.313864555783008
+"pfoa.t1.res","PFAS","umfa2.t1",0,-0.322677349052332
+"pfoa.t1.res","PFAS","umfa2.t1",1,-0.683679911888775
+"pcb118.t1.res","PCBs","umfa2.t1",0,-0.259001782366713
+"pcb118.t1.res","PCBs","umfa2.t1",1,-0.540182202025336
+"pcb138.t1.res","PCBs","umfa2.t1",0,0.0661238140500446
+"pcb138.t1.res","PCBs","umfa2.t1",1,0.722603651787886
+"pcb153.t1.res","PCBs","umfa2.t1",0,0.894302977605574
+"pcb153.t1.res","PCBs","umfa2.t1",1,0.02459882248311
+"pcb180.t1.res","PCBs","umfa2.t1",0,-0.701425009288906
+"pcb180.t1.res","PCBs","umfa2.t1",1,-0.20702027224566
+"bbhc.t1.res","All POPs","umfa2.t1",0,-0.0454186423212502
+"bbhc.t1.res","All POPs","umfa2.t1",1,0.172541997800352
+"dde.t1.res","All POPs","umfa2.t1",0,-0.0354155442296501
+"dde.t1.res","All POPs","umfa2.t1",1,0.177665740432422
+"oxychlor.t1.res","All POPs","umfa2.t1",0,-0.129423437622275
+"oxychlor.t1.res","All POPs","umfa2.t1",1,-0.335403503643599
+"transnona.t1.res","All POPs","umfa2.t1",0,-0.162717941631245
+"transnona.t1.res","All POPs","umfa2.t1",1,0.127594354724949
+"pfhxs.t1.res","All POPs","umfa2.t1",0,0.243374604190808
+"pfhxs.t1.res","All POPs","umfa2.t1",1,0.0827554018016879
+"pfos.t1.res","All POPs","umfa2.t1",0,-0.317694734962373
+"pfos.t1.res","All POPs","umfa2.t1",1,-0.100157948541931
+"pfoa.t1.res","All POPs","umfa2.t1",0,-0.133317571339408
+"pfoa.t1.res","All POPs","umfa2.t1",1,-0.312739137313764
+"pcb118.t1.res","All POPs","umfa2.t1",0,-0.0380232087435391
+"pcb118.t1.res","All POPs","umfa2.t1",1,-0.0110604310479771
+"pcb138.t1.res","All POPs","umfa2.t1",0,0.0911095074062137
+"pcb138.t1.res","All POPs","umfa2.t1",1,0.284776811551719
+"pcb153.t1.res","All POPs","umfa2.t1",0,0.403385377305831
+"pcb153.t1.res","All POPs","umfa2.t1",1,0.0768842879209101
+"pcb180.t1.res","All POPs","umfa2.t1",0,-0.112847757636957
+"pcb180.t1.res","All POPs","umfa2.t1",1,-0.101135446807143
+"bde47.t1.res","All POPs","umfa2.t1",0,0.236989349583845
+"bde47.t1.res","All POPs","umfa2.t1",1,-0.0617221268776258

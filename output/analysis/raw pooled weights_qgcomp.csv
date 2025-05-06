@@ -1,0 +1,28 @@
+"name","mixture_name","ave_weight"
+"arsenic.t1.res","Metals",-0.0758064450810886
+"cadmium.t1.res","Metals",0.274380346883415
+"lead.t1.res","Metals",0.711089537665262
+"mercury.t1.res","Metals",-0.909663439467588
+"bbhc.t1.res","OC Pesticides",-0.370896811557448
+"dde.t1.res","OC Pesticides",0.369684090481059
+"oxychlor.t1.res","OC Pesticides",-0.590271475946537
+"transnona.t1.res","OC Pesticides",0.591484197022926
+"pfhxs.t1.res","PFAS",1
+"pfos.t1.res","PFAS",-0.498941373142164
+"pfoa.t1.res","PFAS",-0.501058626857836
+"pcb118.t1.res","PCBs",-0.570360692140362
+"pcb138.t1.res","PCBs",0.817446835655566
+"pcb153.t1.res","PCBs",0.154959114280344
+"pcb180.t1.res","PCBs",-0.402045257795548
+"bbhc.t1.res","All POPs",-0.0860081593639804
+"dde.t1.res","All POPs",-0.0490456279312018
+"oxychlor.t1.res","All POPs",-0.103803339358243
+"transnona.t1.res","All POPs",0.0117163093335285
+"pfhxs.t1.res","All POPs",0.320641469110202
+"pfos.t1.res","All POPs",-0.273657875192793
+"pfoa.t1.res","All POPs",-0.244588220394953
+"pcb118.t1.res","All POPs",-0.0868526420431084
+"pcb138.t1.res","All POPs",0.388933645477003
+"pcb153.t1.res","All POPs",0.102096260286718
+"pcb180.t1.res","All POPs",-0.120485988347855
+"bde47.t1.res","All POPs",0.141054168424684
