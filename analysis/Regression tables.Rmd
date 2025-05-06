@@ -1,0 +1,380 @@
+---
+title: "Regression tables"
+author: "Josh Alampi"
+date: "2025-04-25"
+output: html_document
+---
+
+# load 
+
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source(here::here("libraries.R"))
+# source("functions/ggplot functions.R")
+source("functions/analysis functions.R")
+
+chemical_info <- readxl::read_xlsx(here::here("data", "chemical info.xlsx"))
+```
+
+# Prep
+```{r}
+results_round <- 1 # The number of decimal places to round results to
+
+pvalue_rounder <- function(p) 
+{
+  require(dplyr)
+  formatted_p <- case_when(
+    p > 0.99 ~ ">.99", # for P values greater than .99, report as "P>.99."
+    p <= 0.99 & p > 0.05 ~ paste0((format(round(p, 2), nsmall = 2))), # or P values greater than or equal to .01, report the value to the nearest hundredth
+    p <= 0.05 & p >= 0.01 ~ paste0(format(round(p, 2), nsmall = 2), "*"),
+    p < 0.01 & p >= 0.001 ~ paste0(format(round(p, 3), nsmall = 3), "*"), # for P values between .001 and .01, report the value to the nearest thousandth;
+    p < 0.001 ~ "p.int<.001*" # for P values less than .001, report as "P<.001"
+  )
+  
+  return(formatted_p)
+}
+```
+
+## Category names
+```{r}
+# mixture_names <- c("Metals", "OC Pesticides", "PFAS", "PCBs", "All POPs")
+fa_names <- c("<400", "400-1000", ">1000")
+pl_fol_names <- c("<10ᵗʰ %ile", "10ᵗʰ-80ᵗʰ %ile", ">80ᵗʰ %ile")
+```
+
+## Titles
+```{r}
+title_no_mod <- "Table 3. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation, and individual chemicals and SRS-2 scores using linear regression, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_mod <- "Table 4. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation, and individual chemicals and SRS-2 scores using linear regression, assessing modification by gestational folic acid supplementation and plasma total folate concentrations, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+```
+
+## Footers
+```{r}
+# Make function
+controls_for <- function(vars, IPW = T) {
+  output <- paste0("a: Controls for the following variables: ", 
+                   vars, 
+                   ", child age at SRS-2 assessment, HOME score, household income, relationship status, maternal education, maternal race, maternal age, parity, smoking status, city of residence, and year of enrollment. Effect estimates are pooled across 10 multiply imputed datasets.", 
+                   ifelse(IPW == T, 
+                          " Stabilized inverse probability weights are applied.", 
+                          " Stabilized inverse probability weights are not applied."))
+}
+
+# Modifying var footers
+fa_footer <- "b: Folic acid supplementation was primarily measured via a survey conducted at 16 weeks gestation, which queried intake in the past 30 days. We also used data from the 24-hour recall version of this survey and a questionnaire completed at study enrollment (6-13 weeks gestation)."
+pl_fol_footer <- "c: The sum of 5-formyl-THF, 5-10-methylene-THF, THF, UMFA, and 5-methyl-THF."
+
+# Abbreviations
+abbrev_no_mod <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MICE, Multiple imputation by chained equations; MIREC, Maternal-Infant Research on Environmental Chemicals Study; OC, Organochlorine; PCB, Polychlorinated biphenyl; PFAS, Per- and polyfluoroalkyl substances; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; POP, Persistent organic pollutant; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane."
+
+
+abbrev_mod <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MICE, Multiple imputation by chained equations; MIREC, Maternal-Infant Research on Environmental Chemicals Study; OC, Organochlorine; PCB, Polychlorinated biphenyl; PFAS, Per- and polyfluoroalkyl substances; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; POP, Persistent organic pollutant; ref, reference level; THF, Tetrahydrofolate; UMFA, Unmetabolized folic acid; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane; %ile, Percentile."
+```
+
+
+```{r}
+mixtures <- "b: The metals mixture includes arsenic, cadmium, lead, mercury.
+c: The OC pesticides mixture includes β-HCH, DDE, oxychlordane, trans-nonachlor.
+d: The PFAS mixture includes PFHxS, PFOS, PFOA.
+e: The PCBs mixture includes PCB118, PCB138, PCB153, PCB180.
+f: The POP mixture includes β-HCH, DDE, oxychlordane, trans-nonachlor, PFHxS, PFOS, PFOA, PCB118, PCB138, PCB153, PCB180, BDE47."
+
+# mixtures_v2 <- "d: The metals mixture includes arsenic, cadmium, lead, mercury.
+# e: The OC pesticides mixture includes β-HCH, DDE, oxychlordane, trans-nonachlor.
+# f: The PFAS mixture includes PFHxS, PFOS, PFOA.
+# g: The PCBs mixture includes PCB118, PCB138, PCB153, PCB180.
+# h: The POP mixture includes β-HCH, DDE, oxychlordane, trans-nonachlor, PFHxS, PFOS, PFOA, PCB118, PCB138, PCB153, PCB180, BDE47."
+
+
+footer_no_mod <- paste0(controls_for("child sex, gestational folic acid supplementation"), 
+                        "\n", mixtures, "\n", abbrev_no_mod)
+
+footer_mod <- paste0(controls_for("child sex"), 
+                     "\n", mixtures,
+                        # "\n", fa_footer, "\n", pl_fol_footer, "\n",
+                     "\n", abbrev_mod)
+
+```
+
+## set flextable defaults
+```{r}
+init_flextable_defaults()
+
+set_flextable_defaults(
+  font.size = 9.5, font.family = "Calibri",
+  font.color = "black",
+  table.layout = "fixed",
+  border.color = "black",
+  line_spacing = 1,
+  padding.top = 0, padding.bottom = 0,
+  padding.left = 0, padding.right = 0)
+
+```
+
+# No modifiation
+
+## load
+```{r}
+# load and clean quantile g-computation results
+qgcomp_res <- read.csv("output/analysis/raw res_qgcomp_ipw.csv") %>% 
+  mutate(psi = format(round(psi, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(res = paste0(psi, " (", lb, ", ", ub, ")")) %>% 
+  select(c(mixture_name, res)) %>% 
+  rename("x_name" = "mixture_name")
+
+## add superscripts
+qgcomp_res$x_name <- qgcomp_res$x_name %>%  
+  plyr::mapvalues("Metals", "Metalsᵇ") %>%
+  plyr::mapvalues("OC Pesticides", "OC Pesticidesᶜ") %>%
+  plyr::mapvalues("PFAS", "PFASᵈ") %>%
+  plyr::mapvalues("PCBs", "PCBsᵉ") %>%
+  plyr::mapvalues("All POPs", "All POPsᶠ")
+
+
+
+individual_res <- read.csv("output/analysis/individual associations_int_IPW.csv")%>%
+  filter(z_name == "All") %>% 
+  mutate(beta = format(round(beta, results_round), nsmall = results_round, trim =T)) %>%
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>%
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T)) %>%
+  mutate(res = paste0(beta, " (", lb, ", ", ub, ")")) %>% 
+  select(c(x_name, res))
+
+no_mod_res <- rbind(qgcomp_res, individual_res); rm(qgcomp_res, individual_res)
+
+# clean the names
+no_mod_res <- no_mod_res %>% 
+  rename("Mixture or chemical name" = "x_name") %>% 
+  rename("Effect estimate (95% CI)ᵃ" = "res")
+```
+
+## Make Flextable
+```{r}
+flex_no_mod <- no_mod_res %>%
+  flextable() %>%
+  separate_header() %>%
+
+  # align header
+  align(align = "center", part = "header") %>%
+  align(align = "left", part = "header", j = 1) %>%
+
+  # align body
+  align(align = "center", part = "body") %>%
+  align(align = "left", j = 1) %>%
+
+  # merge
+  # merge_h_range(i = row_skips, j1 = 1, j2 = 5) %>%
+
+  # Title and bottom caption
+  add_header_lines(title_no_mod, top = T) %>%
+  add_footer_lines(footer_no_mod) %>%
+
+  set_table_properties(layout = "autofit", width = 1)
+
+flex_no_mod
+```
+
+# Assessing modification
+## load
+```{r}
+# load and clean quantile g-computation results
+qgcomp_res <- read.csv("output/analysis/raw res_qgcomp_int_ipw.csv") %>% 
+  filter(mod_var %in% c("pl_fol3.t1", "fol.intake3")) %>% 
+  mutate(psi = format(round(psi, results_round), digits = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), digits = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), digits = results_round, trim =T)) %>% 
+  mutate(res = paste0(psi, " (", lb, ", ", ub, ")")) %>% 
+  mutate(clean_p = ifelse(is.na(p_int),
+                          "ref.",
+                          pvalue_rounder(p_int))) %>% 
+  rename("x_name" = "mixture_name") %>% 
+  select(c(x_name, res, clean_p, mod_var, mod_level))
+
+  
+## add superscripts
+qgcomp_res$x_name <- qgcomp_res$x_name %>%  
+  plyr::mapvalues("Metals", "Metalsᵈ") %>%
+  plyr::mapvalues("OC Pesticides", "OC Pesticidesᵉ") %>%
+  plyr::mapvalues("PFAS", "PFASᶠ") %>%
+  plyr::mapvalues("PCBs", "PCBsᵍ") %>%
+  plyr::mapvalues("All POPs", "All POPsʰ")
+
+
+individual_res <- read.csv("output/analysis/individual associations_int_IPW.csv") %>%
+  filter(z_name != "All") %>% 
+  mutate(beta = format(round(beta, results_round), nsmall = results_round, trim =T)) %>%
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>%
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T)) %>%
+  mutate(res = paste0(beta, " (", lb, ", ", ub, ")")) %>% 
+  mutate(clean_p = ifelse(is.na(p_int),
+                          "ref.",
+                          pvalue_rounder(p_int))) %>% 
+  rename("mod_var" = "z_name") %>% 
+  rename("mod_level" = "z_level") %>% 
+  select(c(x_name, res, clean_p, mod_var, mod_level))
+
+
+mod_res <- rbind(qgcomp_res, individual_res); rm(qgcomp_res, individual_res)
+
+
+# Set the order that modification results are listed
+mod_res <- mod_res %>% 
+  arrange(factor(mod_var,
+                 c("fol.intake3", "pl_fol3.t1")),
+          factor(mod_level, # Set the order with which results are listed (from left to right)
+                 c("<400", "400-1000",">1000",
+                   "<10th %ile", "10th-80th %ile", ">80th %ile")) )
+  
+```
+
+Clean 'mod_res' such that there are: 
+- 3 columns for the effects of the chemicals at each level of FA supp
+- 3 columns for the p-values of the chemicals at each level of FA supp (note*)
+- 3 columns for the effects of the chemicals at each level of pl fol
+- 3 columns for the p-values of the chemicals at each level of pl fol (note*)
+*: I had to add an invisible character so that the variable names are different. Otherwise the code would break. This does not impact the appearance of the tables. 
+
+```{r}
+# mod_res_wide <- mod_res %>% 
+#   # select(-c(mod_var)) %>% 
+#   pivot_wider(names_from = c(mod_level, mod_var), 
+#               values_from = c('Mixture or chemical name', 'p-interaction'), 
+#               names_vary = "slowest")
+
+# repeat this process for both modifying variables separately
+mod_res_fa <- mod_res %>%
+  filter(mod_var == "fol.intake3") %>% 
+  pivot_wider(names_from = c(mod_level), 
+              values_from = c(res, clean_p), 
+              names_vary = "fastest") %>% 
+  select(-c(mod_var))
+
+mod_res_plfol <- mod_res %>%
+  filter(mod_var == "pl_fol3.t1") %>% 
+  pivot_wider(names_from = c(mod_level), 
+              values_from = c(res, clean_p), 
+              names_vary = "fastest") %>% # default. Get results then p-values
+  select(-c(mod_var, x_name))
+
+mod_res_wide <- cbind(mod_res_fa, mod_res_plfol)
+  
+# manually set names
+colnames(mod_res_wide) <- c("Mixture or chemical name", # label for chemicals
+                            "<400", "400-1000", ">1000" ,  # label for effect estimates
+                            "<400‎ ", "400-1000‎ ", ">1000‎ ", # label for p-interaction values
+                            "<10ᵗʰ %ile", "10ᵗʰ-80ᵗʰ %ile", ">80ᵗʰ %ile", # label for effect estimates
+                            "<10ᵗʰ %ile‎ ", "10ᵗʰ-80ᵗʰ %ile‎ ", ">80ᵗʰ %ile‎ ") # label for p-interaction values
+
+
+```
+
+
+```{r}
+flex_mod <- mod_res_wide %>%
+  flextable() %>%
+  
+  # Add row distinguishing between effect estimates and p-interaction values
+  add_header_row(values = c(" ", "Effect estimate (95% CI)ᵃ", "p-interaction",
+                            "Effect estimate (95% CI)ᵃ", "p-interaction"), # repeat again for pl fol
+                 colwidths = c(1, 3, 3, 3, 3)) %>%
+  
+  # Add another row distinguishing between the two modifying variables
+  add_header_row(values = c(" ", "Folic acid supplementationᵇ (µg/day)", 
+                            "Plasma total folate concentrationᶜ"), # repeat again for pl fol
+               colwidths = c(1, 6, 6)) %>%
+
+  # align header
+  align(align = "center", part = "header") %>%
+  align(align = "left", part = "header", j = 1) %>%
+  
+
+  # align body
+  align(align = "center", part = "body") %>%
+  align(align = "left", j = 1) %>%
+
+  # merge
+  # merge_h_range(i = row_skips, j1 = 1, j2 = 5) %>%
+
+  # Title and bottom caption
+  add_header_lines(title_mod, top = T) %>%
+  add_footer_lines(footer_mod) %>%
+  
+  # Add vertical lines for every column
+  vline(j = c(1:13), part = "body") %>% 
+  vline(j = c(1:13), part = "header") %>% 
+  
+  # Add bolded vertical lines to separate mixtures
+  # vline(j = c(1, 7), part = "body") %>% 
+  vline(j = c(1, 7), border = fp_border(width = 2)) %>% 
+  
+  # set_table_properties(layout = "autofit", width = 1)
+  width(j = c(1:13),
+          width = c(0.9, rep(1, 3), rep(0.5, 3), rep(1, 3), rep(0.5, 3)),
+          unit = "in")
+
+
+flex_mod
+```
+
+```{r}
+# Create a Word document
+doc <- read_docx() %>%
+  body_add_flextable(value = flex_no_mod) %>% 
+  body_add_break() %>%
+  body_end_section_portrait() %>%
+  body_add_flextable(value = flex_mod) %>% 
+  body_end_section_landscape()
+
+```
+
+# Save
+```{r}
+# save
+base::print(doc, target = "output/regression tables.docx")
+base::print(doc, paste0("output/analysis/archive/regression tables_", Sys.Date(), ".docx"))
+```
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

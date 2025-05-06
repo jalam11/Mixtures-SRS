@@ -1,0 +1,125 @@
+---
+title: "qgcomp analysis"
+author: "Josh Alampi"
+date: "2023-08-15"
+output: html_document
+---
+
+# load 
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source("libraries.R", echo = T)
+source("functions/analysis functions.R")
+
+# Load MIREC data
+data <- read.csv("//ais-fs1.sfu.ca/home2/Redirected_Profiles/jalampi/Desktop/MIREC loader 2022/clean data/MIREC data_mixtures.csv") %>% 
+  filter(is.na(srs) == F) %>% 
+  clean_data(clean_city = T)
+
+```
+
+# analysis
+
+## Prep
+```{r}
+chemical_names_list <- list(c("arsenic.t1.res", "cadmium.t1.res", "lead.t1.res", "mercury.t1.res"),
+                            c("bbhc.t1.res", "dde.t1.res", "oxychlor.t1.res", "transnona.t1.res"),
+                            c("pfhxs.t1.res", "pfos.t1.res", "pfoa.t1.res"),
+                            c("pcb118.t1.res", "pcb138.t1.res","pcb153.t1.res", "pcb180.t1.res"),
+                            c("bbhc.t1.res", "dde.t1.res", "oxychlor.t1.res", "transnona.t1.res",
+                              "pfhxs.t1.res", "pfos.t1.res", "pfoa.t1.res",
+                              "pcb118.t1.res", "pcb138.t1.res","pcb153.t1.res", "pcb180.t1.res",
+                              "bde47.t1.res"))
+
+mixture_names <- c("Metals", "OC Pesticides", "PFAS", "PCBs", "All POPs")
+
+confounder_names <- c("sex2", "income4", "edu4", "living.status2", "home.score", "race.white2", 
+                      "mom.age", "parity3", "year.enroll4", "srs.age", "city6", "fol.intake3", "smoker2")
+
+confounder_names_folint <- c("sex2", "income4", "edu4", "living.status2", "home.score", "race.white2", 
+                             "mom.age", "parity3", "year.enroll4", "srs.age", "city6", "smoker2")
+# No longer including "fol.intake3" in vector. Including it will break the code when analyzing interaction by "fol.intake3", as when you assess interaction, by a variable, it will automatically add it to the model, and adding a variable to a model twice causes issues.
+
+## The model which assesses interaction by "pl_fol3.t1" also will not include "fol.intake3" because these variables are highly correlated, so including both in a model will introduce multicollinearity.  
+
+```
+
+## Implement MICE
+```{r}
+m <- 10
+
+imputed_data <- mice(data, m = m, printFlag = F, seed = 1010)
+```
+
+# Main analysis
+```{r}
+main <- analysis_qgcomp(chemical_names_list, mixture_names, "srs", confounder_names, 
+                        mice_data = imputed_data)
+
+```
+
+# Analysis with interactions
+Make sure that the modifying variable is not included in the vector "confounder_names"!
+```{r}
+int_fa_supp <- analysis_qgcomp.emm_cat3(chemical_names_list, mixture_names, 
+                                        "srs", "fol.intake3", confounder_names_folint, 
+                                        mice_data = imputed_data,
+                                        mod_var_name = "fol.intake3",
+                                        level_names = c("400-1000", "<400", ">1000"))
+
+int_plasma_fol <- analysis_qgcomp.emm_cat3(chemical_names_list, mixture_names, 
+                                           "srs", emmvar = "pl_fol3.t1",
+                                           confounder_names_folint, 
+                                           mice_data = imputed_data,
+                                           mod_var_name = "pl_fol3.t1",
+                                           level_names = c("10th-80th %ile", "<10th %ile", ">80th %ile"))
+
+
+raw_res_qgcomp_int <- rbind(int_fa_supp[[1]], int_plasma_fol[[1]])
+raw_weights_qgcomp_int <- rbind(int_fa_supp[[2]], int_plasma_fol[[2]])
+raw_pooled_weights_qgcomp_int <- rbind(int_fa_supp[[3]], int_plasma_fol[[3]])
+```
+
+
+
+```{r}
+int_fa_supp[[5]][[1]]
+int_plasma_fol[[3]]
+```
+
+
+```{r}
+int_weights <- raw_weights_qgcomp_int %>% 
+  filter(imputation_number == 1) %>% 
+  select(-c(imputation_number))
+
+int_weights_pooled <- raw_pooled_weights_qgcomp_int
+
+comparing_int_weights <- merge(int_weights, int_weights_pooled, 
+                         by = c("name", "mixture_name",
+                                "mod_var_name", "mod_level")) %>% 
+  mutate(diference = round(ave_weight - weight, 2)) %>% 
+  mutate(same_sign = ifelse(sign(ave_weight) == sign(weight), "Yes", "No")) %>% 
+  arrange(c(mixture_name))
+```
+
+# Save
+```{r}
+my_write.csv(main[[1]], "output/analysis/", "raw res_qgcomp") # results
+my_write.csv(main[[2]], "output/analysis/", "raw weights_qgcomp") # weights
+my_write.csv(main[[3]], "output/analysis/", "raw pooled weights_qgcomp") # pooled weights
+
+my_write.csv(raw_res_qgcomp_int, "output/analysis/", "raw res_qgcomp_int") # results
+my_write.csv(raw_weights_qgcomp_int, "output/analysis/", "raw weights_qgcomp_int") # weights
+my_write.csv(raw_pooled_weights_qgcomp_int, "output/analysis/", "raw pooled weights_qgcomp_int") # pooled weights
+```
+
+```{r}
+
+```
+
+
+

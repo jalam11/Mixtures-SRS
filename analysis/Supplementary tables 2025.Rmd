@@ -1,0 +1,595 @@
+---
+title: "Supplementary tables 2025"
+author: "Josh Alampi"
+date: "2025-04-25"
+output: html_document
+---
+
+# load
+```{r}
+#clear workspace
+rm(list=ls(all=TRUE))
+
+# load packages and functions
+source(here::here("libraries.R"))
+# source("functions/ggplot functions.R")
+source("functions/analysis functions.R")
+
+chemical_info <- readxl::read_xlsx(here::here("data", "chemical info.xlsx"))
+```
+
+# functions
+
+## Prep for flextable
+Converts long results into a wide table (one column for each set of weights)
+```{r}
+make_wide <- function(weights, clean_results, k, col_names_a, col_names_b, 
+                      cell_1_1_text = "Ψ (95% CI)ᵃ", name_1stcol = "   ",
+                      cell_2_2_text = "Weights",
+                      chemical_info) {
+  
+  if (k > 1){
+    combinations <- expand.grid(col_names_a, col_names_b)
+    combinations <- combinations[order(combinations$Var1, combinations$Var2), ]
+    names_vector <- paste0(combinations$Var1, "_", combinations$Var2)
+  } else {
+    names_vector <- col_names_a
+  }
+  
+  num_cols <- 1 + 5 * k
+  
+  table <- setNames(data.frame(matrix(data = "", nrow = 18, ncol = num_cols)), 
+                    c(name_1stcol, names_vector)) #set column names
+  
+  # Store results
+  table[1, 1]   <- cell_1_1_text
+  table[1, 2:num_cols] <-  clean_results 
+  
+  # Store weights
+  table[2, 1] <- "Biomarker names"
+  table[2, 2] <- cell_2_2_text
+  table[3:18, 1]  <- chemical_info[, 1] # Name
+  
+  for (i in 1:k){
+    these_weights <- weights[,i + 1] # extract column
+    
+    table[3:6, 1 + i]         <- these_weights[1:4]   # Metals 
+    table[7:10, 1 + i + k]    <- these_weights[5:8]   # OCPs
+    table[11:13, 1 + i + 2*k] <- these_weights[9:11]  # PFAS
+    table[14:17, 1 + i + 3*k] <- these_weights[12:15] # PCBs
+    table[7:18, 1 + i + 4*k]  <- these_weights[16:27] # POPs
+  }
+  
+  return(table)
+}
+```
+
+## Make flextable for weights
+```{r}
+make_weights_flextable <- function(.data, k = 1, 
+                             title, footer) {
+  table <- .data
+  length <- dim(table)[1]
+  width  <- dim(table)[2]
+  # width  <- 1 + 5 * k
+  vert_lines <- seq(from = 1, by = k, length.out = 5)
+  
+  vert_lines_i <- ifelse(k > 1, c(2:4), c(2))
+  
+  flex <- flextable(table)
+
+  if(k != 1){
+    flex <- flex %>%
+      separate_header()
+  }
+  
+  flex <- flex %>%
+
+    # align header
+    align(align = "center", part = "header") %>% # to the center
+    align(align = "left", part = "header", j = 1) %>% # except the first column
+
+    # align body
+    align(align = "center", part = "body") %>% # to the center
+    align(align = "left", part = "body", j = 1) %>% # except the first column
+
+    # # Fix the "weights" sub-heading
+    merge_at(i = 2, j = 2:width) %>%
+    hline(i = c(1, 2)) %>% # add horizontal lines
+    
+    # Title and bottom caption
+    add_header_lines(title, top = T) %>%
+    align(align = "left", i = 1, part = "header") %>% # Align title to the left
+    add_footer_lines(value = footer) %>% 
+
+    # Add vertical lines to separate mixtures
+    vline(j = vert_lines, i = c(1, 3:length), part = "body") %>% 
+    vline(j = 1, i = 2, part = "body") %>% # Next to biomarker names
+    
+    vline(j = vert_lines, i = vert_lines_i, part = "header") # 2nd rows if k = 1, 2nd + 3rd rows otherwise
+  
+  if(k != 1){
+    flex <- flex %>%
+      hline(i = 2, j = 1:width, part = "header", border = fp_border_default()) %>% 
+      vline(j = vert_lines, i = 3, part = "header")
+  }
+  
+  return(flex)
+}
+```
+
+
+## Make final flextables
+Uses the previous 2 functions. Using this function saves a lot of code. 
+```{r}
+make_mix_flextable <- function(clean_res, weights,
+                               mod_var_name, k, filter = T,
+                               chemical_info, title, footer, 
+                               
+                               col_names_a = NULL, col_names_b = "MISSING",
+                               cell_1_1_text = "Ψ (95% CI)ᵃ", name_1stcol = "   ",
+                               cell_2_2_text = "Weights",
+                               manual_width = F) {
+  # Prep
+  if(is.null(col_names_a) == T){
+    col_names_a <- c("Metals", "OC Pesticides", "PFAS", "PCBs", "All POPs")
+  }
+  
+  # If I need to filter so only the mod variable is 
+  if(filter == T){
+    weights <- weights %>% 
+      filter(mod_var == mod_var_name) %>% 
+      pivot_wider(names_from = mod_level, values_from = weight) %>% 
+      select(-c(mod_var, mixture_name)) %>% 
+      as.data.frame()
+  
+    clean_res <- clean_res %>% 
+      filter(mod_var == mod_var_name) %>% 
+      ungroup() %>% 
+      dplyr::select(-c(mod_var)) %>% 
+      t()
+  }
+  
+  flex <- make_wide(weights = weights, clean_results = clean_res, 
+                    k = k, 
+                    col_names_a = col_names_a, col_names_b = col_names_b,
+                    cell_1_1_text = cell_1_1_text,
+                    name_1stcol = name_1stcol,
+                    cell_2_2_text = cell_2_2_text,
+                    chemical_info) %>% 
+    make_weights_flextable(k = k, 
+                           title = title, footer = footer)
+  
+  if(manual_width == F){
+    flex <- flex %>% 
+      width(j = c(1:(k*5 +1)), 
+          width = c(1, rep(0.6, (k*5))), 
+          unit = "in")
+  }
+    
+  
+  return(flex)
+  
+}
+```
+
+# Prep
+```{r}
+results_round <- 1 # The number of decimal places to round results to
+```
+
+## Category names
+```{r}
+# mixture_names <- c("Metals", "OC Pesticides", "PFAS", "PCBs", "All POPs")
+fa_names <- c("<400", "400-1000", ">1000")
+pl_fol_names <- c("<10ᵗʰ %ile", "10ᵗʰ-80ᵗʰ %ile", ">80ᵗʰ %ile")
+sex2_names <- c("Male", "Female")
+umfa_names <- c("≤80ᵗʰ %ile", ">80ᵗʰ %ile")
+wqs_names <- c("(+)", "(-)")
+```
+
+## Titles
+```{r}
+title_qgcomp <- "Table S2. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation, including weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_sex2 <- "Table S3. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation and assessing modification by child sex, including quantile g-computation weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_fa <- "Table S4. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation and assessing modification by gestational folic acid supplementation, including quantile g-computation weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_pl_fol <- "Table S5. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation and assessing modification by plasma total folate concentrations, including quantile g-computation weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_wqs <- "Table S6. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using weighted quantile sum regression, including weighted quantile sum weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_umfa <- "Table S7. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation and assessing modification by plasma unmetabolized folic acid concentrations, including quantile g-computation weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_qgcomp_fish <- "Table S8. Adjustedᵃ associations (additionally controlling for gestational fish consumption) between chemical mixtures and SRS-2 T-scores using quantile g-computation, including quantile g-computation weights, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_qgcomp_no_ipw <- "Table S9. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation without inverse probability weighting, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_fa_no_ipw<- "Table S10. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation and assessing modification by gestational folic acid supplementation without inverse probability weighting, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+title_pl_fol_no_ipw <- "Table S11. Adjustedᵃ associations between chemical mixtures and SRS-2 T-scores using quantile g-computation and assessing modification by plasma total folate concentrations without inverse probability weighting, the MIREC study, Canada, 2008-2011 (n = 601)."
+
+```
+
+## Footers
+```{r}
+controls_for <- function(vars, IPW = T) {
+  output <- paste0("a: Controls for the following variables: ", 
+                   vars, 
+                   ", child age at SRS-2 assessment, HOME score, household income, relationship status, maternal education, maternal race, maternal age, parity, smoking status, city of residence, and year of enrollment. Effect estimates are pooled across 10 multiply imputed datasets.", 
+                   ifelse(IPW == T, 
+                          " Stabilized inverse probability weights are applied.", 
+                          " Stabilized inverse probability weights are not applied."))
+}
+
+fa_footer <- "b: Folic acid supplementation was primarily measured via a survey conducted at 16 weeks gestation, which queried intake in the past 30 days. We also used data from the 24-hour recall version of this survey and a questionnaire completed at study enrollment (6-13 weeks gestation)."
+pl_fol_footer <- "b: The sum of 5-formyl-THF, 5-10-methylene-THF, THF, UMFA, and 5-methyl-THF."
+weights_footer_b <- "b: Only the weights from the first MICE imputation, not the pooled weights, are displayed."
+weights_footer_c <- "c: Only the weights from the first MICE imputation, not the pooled weights, are displayed."
+weights_footer_wqs <- "b: Weights are averaged across 10 multiply imputed datasets."
+
+
+# abbrev_indiv <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MIREC, Maternal-Infant Research on Environmental Chemicals Study; PCB, Polychlorinated biphenyl; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane."
+
+abbrev_qgcomp <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MICE, Multiple imputation by chained equations; MIREC, Maternal-Infant Research on Environmental Chemicals Study; OC, Organochlorine; PCB, Polychlorinated biphenyl; PFAS, Per- and polyfluoroalkyl substances; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; POP, Persistent organic pollutant; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane."
+
+abbrev_pl_fol <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MICE, Multiple imputation by chained equations; MIREC, Maternal-Infant Research on Environmental Chemicals Study; OC, Organochlorine; PCB, Polychlorinated biphenyl; PFAS, Per- and polyfluoroalkyl substances; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; POP, Persistent organic pollutant; THF, Tetrahydrofolate; UMFA, Unmetabolized folic acid; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane; %ile, Percentile."
+
+abbrev_umfa <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MICE, Multiple imputation by chained equations; MIREC, Maternal-Infant Research on Environmental Chemicals Study; OC, Organochlorine; PCB, Polychlorinated biphenyl; PFAS, Per- and polyfluoroalkyl substances; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; POP, Persistent organic pollutant; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane; %ile, Percentile."
+
+abbrev_wqs <- "Abbreviations: BDE, brominated diphenyl ether; CI; Confidence interval; DDE, Dichlorodiphenyldichloroethylene; HOME, Home Observation for Measurement of the Environment; MICE, Multiple imputation by chained equations; MIREC, Maternal-Infant Research on Environmental Chemicals Study; OC, Organochlorine; PCB, Polychlorinated biphenyl; PFAS, Per- and polyfluoroalkyl substances; PFHxS, Perfluorohexanesulfonic acid; PFOA, Perfluorooctanoic acid; PFOS, Perfluorooctanesulfonic acid; POP, Persistent organic pollutant; SRS-2, Social Responsiveness Scale-2; β-HCH, β-Hexachlorocyclohexane."
+
+
+footer_qgcomp <- paste0(controls_for("child sex, gestational folic acid supplementation"), "\n", 
+                    weights_footer_b, "\n", abbrev_qgcomp)
+footer_sex2 <- paste0(controls_for("gestational folic acid supplementation"), "\n", 
+                    weights_footer_b, "\n", abbrev_qgcomp)
+footer_fa <- paste0(controls_for("child sex"), "\n", 
+                    fa_footer, "\n", 
+                    weights_footer_c, "\n", abbrev_qgcomp)
+footer_pl_fol <- paste0(controls_for("child sex"), "\n", 
+                    pl_fol_footer, "\n", 
+                    weights_footer_c, "\n", abbrev_pl_fol)
+footer_wqs <- paste0(controls_for("child sex, gestational folic acid supplementation"), "\n",
+                    weights_footer_wqs, "\n", abbrev_wqs)
+footer_umfa <- paste0(controls_for("child sex"), "\n", 
+                    weights_footer_b, "\n", abbrev_umfa)
+footer_qgcomp_fish <- paste0(controls_for("gestational fish consumption, child sex, gestational folic acid supplementation"), "\n", 
+                    weights_footer_b, "\n", abbrev_qgcomp)
+
+footer_qgcomp_no_ipw <- paste0(controls_for("child sex, gestational folic acid supplementation", IPW = F), "\n", 
+                    weights_footer_b, "\n", abbrev_qgcomp)
+footer_fa_no_ipw <- paste0(controls_for("child sex", IPW = F), "\n", 
+                    fa_footer, "\n", 
+                    weights_footer_c, "\n", abbrev_qgcomp)
+footer_pl_fol_no_ipw <- paste0(controls_for("child sex", IPW = F), "\n", 
+                    pl_fol_footer, "\n", 
+                    weights_footer_c, "\n", abbrev_pl_fol)
+
+
+
+```
+
+## set flextable defaults
+```{r}
+init_flextable_defaults()
+
+set_flextable_defaults(
+  font.size = 9.5, font.family = "Calibri",
+  font.color = "black",
+  table.layout = "fixed",
+  border.color = "black",
+  line_spacing = 1,
+  padding.top = 0, padding.bottom = 0,
+  padding.left = 0, padding.right = 0)
+
+```
+
+# load and clean data
+
+## qgcomp
+```{r}
+qgcomp_res <- read.csv("output/analysis/raw res_qgcomp_ipw.csv") %>% 
+  mutate(psi = format(round(psi, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T))  
+  
+qgcomp_weights <- read.csv("output/analysis/raw weights_qgcomp_ipw.csv") %>% 
+  mutate(weight = round(weight, 2)) %>% 
+  filter(imputation_number == 1) %>% 
+  select(-c(imputation_number, mixture_name))
+
+# clean
+qgcomp_clean_res <- qgcomp_res %>% # Extract qgcomp results
+  transmute(res = paste0(psi, "\n(", lb, ", ", ub, ")")) %>% # Format
+  t()
+```
+
+## qgcomp fish
+```{r}
+qgcomp_res_fish <- read.csv("output/analysis/raw res_qgcomp_fish_ipw.csv") %>% 
+  mutate(psi = format(round(psi, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T))  
+  
+qgcomp_weights_fish <- read.csv("output/analysis/raw weights_qgcomp_fish_ipw.csv") %>% 
+  mutate(weight = round(weight, 2)) %>% 
+  filter(imputation_number == 1) %>% 
+  select(-c(imputation_number, mixture_name))
+
+# clean
+qgcomp_clean_res_fish <- qgcomp_res_fish %>% # Extract qgcomp results
+  transmute(res = paste0(psi, "\n(", lb, ", ", ub, ")")) %>% # Format
+  t()
+```
+
+## qgcomp-int
+```{r}
+int_res <- read.csv("output/analysis/raw res_qgcomp_int_ipw.csv") %>% 
+  mutate(psi = format(round(psi, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T)) %>% 
+  arrange(factor(mod_var, 
+                 c("fol.intake3", "pl_fol3.t1", "sex2")),
+          factor(mixture_name, 
+                 c("Metals", "OC Pesticides", "PFAS",
+                   "PCBs", "All POPs")),
+          factor(mod_level, # Set the order with which results are listed (from left to right)
+                 c("≤80th %ile", # low UMFA listed first
+                   "<400", "400-1000",">1000",
+                   "<10th %ile", "10th-80th %ile", ">80th %ile", 
+                   # low, medium, high plasma folate; high UMFA listed last
+                   "Male", "Female")) )
+
+int_weights <- read.csv("output/analysis/raw weights_qgcomp_int_ipw.csv") %>% 
+  mutate(weight = round(weight, 2)) %>% 
+  filter(imputation_number == 1) %>% 
+  rename(mod_var = mod_var_name) %>% # rename the "mod_var_name" column to "mod_var"
+  select(-c(imputation_number))
+
+# Clean
+int_clean_res <- int_res %>% 
+  group_by(mod_var) %>% 
+  transmute(res = paste0(psi, "\n(", lb, ",\n", ub, ")")) # Format
+
+```
+
+## WQS 
+```{r}
+# load results
+wqs_res <- read.csv("output/analysis/raw res_wqs_IPW.csv") %>% 
+  mutate(beta_pos = format(round(beta_pos, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb_pos = format(round(lb_pos, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub_pos = format(round(ub_pos, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(beta_neg = format(round(beta_neg, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb_neg = format(round(lb_neg, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub_neg = format(round(ub_neg, results_round), nsmall = results_round, trim =T)) 
+
+wqs_weights <- read.csv("output/analysis/raw pooled weights_wqs_IPW.csv") %>% 
+  select(-c(mixture_name)) %>% 
+  mutate(mean_weight_pos = round(mean_weight_pos, 2)) %>% 
+  mutate(mean_weight_neg = round(mean_weight_neg, 2)) 
+
+# Clean
+wqs_clean_res <- wqs_res %>% # Extract qgcomp results
+  mutate(res_pos = paste0(beta_pos, "\n(", lb_pos, ",\n", ub_pos, ")")) %>% 
+  mutate(res_neg = paste0(beta_neg, "\n(", lb_neg, ",\n", ub_neg, ")")) %>% 
+  select(c(res_pos, res_neg)) %>% 
+  t() %>% 
+  as.vector()
+```
+
+## qgcomp WITHOUT IPW
+```{r}
+# Full sample
+qgcomp_res_no_ipw <- read.csv("output/analysis/raw res_qgcomp.csv") %>% 
+  mutate(psi = format(round(psi, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T))  
+  
+qgcomp_weights_no_ipw <- read.csv("output/analysis/raw weights_qgcomp.csv") %>% 
+  mutate(weight = round(weight, 2)) %>% 
+  filter(imputation_number == 1) %>% 
+  select(-c(imputation_number, mixture_name))
+
+# clean
+qgcomp_clean_res_no_ipw <- qgcomp_res_no_ipw %>% # Extract qgcomp results
+  transmute(res = paste0(psi, "\n(", lb, ", ", ub, ")")) %>% # Format
+  t()
+
+# Interaction
+int_res_no_ipw <- read.csv("output/analysis/raw res_qgcomp_int.csv") %>% 
+  mutate(psi = format(round(psi, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(lb = format(round(lb, results_round), nsmall = results_round, trim =T)) %>% 
+  mutate(ub = format(round(ub, results_round), nsmall = results_round, trim =T)) %>% 
+  arrange(factor(mod_var, 
+                 c("fol.intake3", "pl_fol3.t1")),
+          factor(mixture_name, 
+                 c("Metals", "OC Pesticides", "PFAS",
+                   "PCBs", "All POPs")),
+          factor(mod_level, # Set the order with which results are listed (from left to right)
+                 c("<400", "400-1000",">1000",
+                   "<10th %ile", "10th-80th %ile", ">80th %ile")) 
+          )
+
+int_weights_no_ipw <- read.csv("output/analysis/raw weights_qgcomp_int.csv") %>% 
+  mutate(weight = round(weight, 2)) %>% 
+  filter(imputation_number == 1) %>% 
+  rename(mod_var = mod_var_name) %>% # rename the "mod_var_name" column to "mod_var"
+  select(-c(imputation_number))
+
+# Clean
+int_clean_res_no_ipw <- int_res_no_ipw %>% 
+  group_by(mod_var) %>% 
+  transmute(res = paste0(psi, "\n(", lb, ",\n", ub, ")")) # Format
+```
+
+# Make flextables
+
+## qgcomp 
+```{r}
+flex_qgcomp <- make_mix_flextable(clean_res = qgcomp_clean_res, weights = qgcomp_weights, 
+                   k = 1, chemical_info = chemical_info, filter = F, manual_width = T,
+                   col_names_b = wqs_names, title = title_qgcomp, footer = footer_qgcomp,
+                   name_1stcol = "Mixture name",
+                   cell_2_2_text = "Weightsᵇ") %>% 
+  set_table_properties(layout = "autofit", width = 1) 
+
+flex_qgcomp_fish <- make_mix_flextable(clean_res = qgcomp_clean_res_fish, weights = qgcomp_weights_fish, 
+                   k = 1, chemical_info = chemical_info, filter = F, manual_width = T,
+                   col_names_b = wqs_names, title = title_qgcomp_fish, footer = footer_qgcomp_fish,
+                   name_1stcol = "Mixture name",
+                   cell_2_2_text = "Weightsᵇ") %>% 
+  set_table_properties(layout = "autofit", width = 1) 
+
+flex_qgcomp
+flex_qgcomp_fish
+```
+
+## qgcomp-interaction 
+```{r}
+flex_sex2 <- make_mix_flextable(clean_res = int_clean_res, weights = int_weights, 
+                   mod_var_name = "sex2", k = 2, chemical_info = chemical_info, 
+                   col_names_b = sex2_names, title = title_sex2, footer = footer_sex2,
+                   name_1stcol = "Mixture name_Child sex",
+                   cell_2_2_text = "Weightsᵇ")
+
+flex_fa <- make_mix_flextable(clean_res = int_clean_res, weights = int_weights, 
+                   mod_var_name = "fol.intake3", k = 3, chemical_info = chemical_info, 
+                   col_names_b = fa_names, title = title_fa, footer = footer_fa,
+                   name_1stcol = "Mixture name_FA supplementationᵇ (µg/day)",
+                   cell_2_2_text = "Weightsᶜ")
+
+flex_pl_fol <- make_mix_flextable(clean_res = int_clean_res, weights = int_weights, 
+                   mod_var_name = "pl_fol3.t1", k = 3, chemical_info = chemical_info, 
+                   col_names_b = pl_fol_names, title = title_pl_fol, footer = footer_pl_fol,
+                   name_1stcol = "Mixture name_Plasma total folate concentrationᵇ",
+                   cell_2_2_text = "Weightsᶜ")
+
+flex_umfa <- make_mix_flextable(clean_res = int_clean_res, weights = int_weights, 
+                   mod_var_name = "umfa2.t1", k = 2, chemical_info = chemical_info, 
+                   col_names_b = umfa_names, title = title_umfa, footer = footer_umfa,
+                   name_1stcol = "Mixture name_Plasma unmetabolized folic acid concentrations",
+                   cell_2_2_text = "Weightsᵇ")
+
+flex_sex2
+flex_fa
+flex_pl_fol
+flex_umfa
+```
+
+## WQS
+```{r}
+flex_wqs <- make_mix_flextable(clean_res = wqs_clean_res, weights = wqs_weights, 
+                               k = 2, chemical_info = chemical_info, filter = F,
+                               col_names_b = wqs_names, title = title_wqs, footer = footer_wqs,
+                               name_1stcol = "Mixture name_Partial effect",
+                               cell_1_1_text = "β (95% CI)ᵃ",
+                               cell_2_2_text = "Weightsᵇ")
+
+flex_wqs
+```
+
+##qgcomp WITHOUT IPW
+```{r}
+flex_qgcomp_no_ipw <- make_mix_flextable(clean_res = qgcomp_clean_res_no_ipw, weights = qgcomp_weights_no_ipw, 
+                   k = 1, chemical_info = chemical_info, filter = F, manual_width = T,
+                   col_names_b = wqs_names, title = title_qgcomp_no_ipw, footer = footer_qgcomp_no_ipw,
+                   name_1stcol = "Mixture name",
+                   cell_2_2_text = "Weightsᵇ") %>% 
+  set_table_properties(layout = "autofit", width = 1) 
+
+flex_fa_no_ipw <- make_mix_flextable(clean_res = int_clean_res_no_ipw, weights = int_weights_no_ipw, 
+                   mod_var_name = "fol.intake3", k = 3, chemical_info = chemical_info, 
+                   col_names_b = fa_names, title = title_fa_no_ipw, footer = footer_fa_no_ipw,
+                   name_1stcol = "Mixture name_FA supplementationᵇ (µg/day)",
+                   cell_2_2_text = "Weightsᶜ")
+
+flex_pl_fol_no_ipw <- make_mix_flextable(clean_res = int_clean_res_no_ipw, weights = int_weights_no_ipw, 
+                   mod_var_name = "pl_fol3.t1", k = 3, chemical_info = chemical_info, 
+                   col_names_b = pl_fol_names, title = title_pl_fol_no_ipw, footer = footer_pl_fol_no_ipw,
+                   name_1stcol = "Mixture name_Plasma total folate concentrationᵇ",
+                   cell_2_2_text = "Weightsᶜ")
+
+
+flex_qgcomp_no_ipw
+flex_fa_no_ipw
+flex_pl_fol_no_ipw
+```
+
+
+# Put together
+```{r}
+titles <- setNames(data.frame(matrix(data = NA, nrow = 16, ncol = 2)), #make dataframe
+                                        c("Item", "Page number")) #set column names
+titles[1,1] <- "Table of contents"
+titles[2,1] <- "Appendix 1: Further details on our use of multiple imputation by chained equations."
+titles[3,1] <- "Table S1. Comparison of study and full sample's sociodemographic characteristics, MIREC study, Canada, 2008-11."
+titles[4,1] <- title_qgcomp
+titles[5,1] <- title_sex2
+titles[6,1] <- title_fa
+titles[7,1] <- title_pl_fol
+titles[8,1] <- title_wqs
+titles[9,1] <- title_umfa
+titles[10,1] <- title_qgcomp_fish
+titles[11,1] <- title_qgcomp_no_ipw
+titles[12,1] <- title_fa_no_ipw
+titles[13,1] <- title_pl_fol_no_ipw
+titles[14,1] <- "Figure S1. Flow chart of study participants in sample, the MIREC Study, Canada, 2008-11."
+titles[15,1] <- "Figure S2. Directed acyclic graph depicting our assumptions about the relationship between gestational environmental chemical mixtures and autistic behaviors."
+titles[16,1] <- "References"
+
+titles <- titles %>% 
+  flextable() %>% 
+  set_table_properties(layout = "autofit", width = 1) 
+titles
+```
+
+
+```{r}
+# Create a Word document
+doc <- read_docx() %>%
+  body_add_flextable(value = titles) %>% 
+  body_add_break() %>% 
+  body_add_flextable(value = flex_qgcomp) %>% 
+  body_add_break() %>% 
+  body_add_flextable(value = flex_sex2) %>%
+  body_add_break() %>% 
+  
+  body_end_section_portrait() %>% 
+  body_add_flextable(value = flex_fa) %>% 
+  body_add_break() %>% 
+  body_add_flextable(value = flex_pl_fol) %>%
+  body_add_break() %>% 
+  body_end_section_landscape() %>% 
+  
+  body_add_flextable(value = flex_wqs) %>% 
+  body_add_break() %>% 
+  body_add_flextable(value = flex_umfa) %>%
+  body_add_break() %>% 
+  body_add_flextable(value = flex_qgcomp_fish) %>% 
+  body_add_break() %>% 
+  
+  body_add_flextable(value = flex_qgcomp_no_ipw) %>% 
+  body_add_break() %>% 
+  body_end_section_portrait() %>% 
+  body_add_flextable(value = flex_fa_no_ipw) %>% 
+  body_add_break() %>% 
+  body_add_flextable(value = flex_pl_fol_no_ipw) %>%
+  body_end_section_landscape() 
+
+```
+
+# Save
+```{r}
+# save
+base::print(doc, target = "output/supp tables.docx")
+base::print(doc, target = paste0("output/analysis/archive/supp tables_", Sys.Date(), ".docx"))
+```
+
+
+```{r}
+
+```
+
