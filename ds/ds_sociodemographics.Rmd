@@ -106,7 +106,7 @@ get_ds(data, sex2, 0, "Male")
 
 # make table1 (with SRS data)
 ```{r include=FALSE}
-table1 <- setNames(data.frame(matrix(data = "", nrow = 49, ncol = 3)), #make dataframe
+table1 <- setNames(data.frame(matrix(data = "", nrow = 63, ncol = 3)), #make dataframe
                               c("Variable", "n (%)", "Mean SRS-2 score (SD)")) #set column names
 
 i <- 1
@@ -157,6 +157,16 @@ table1[i,] <- get_ds(data, home.score2, "NA", "Missing"); i <- i + 1
 table1[i,1] <- "Smoked during pregnancy"; i <- i + 1
 table1[i,] <- get_ds(data, smoker2, 1, "Yesᵃ"); i <- i + 1
 table1[i,] <- get_ds(data, smoker2, 0, "No"); i <- i + 1
+
+table1[i,1] <- "Year of enrollment"; i <- i + 1
+table1[i,] <- get_ds(data, year.enroll4, 1, "2008"); i <- i + 1
+table1[i,] <- get_ds(data, year.enroll4, 2, "2009"); i <- i + 1
+table1[i,] <- get_ds(data, year.enroll4, 3, "2010"); i <- i + 1
+table1[i,] <- get_ds(data, year.enroll4, 4, "2011"); i <- i + 1
+
+table1[i,1] <- "Child age at SRS assessment"; i <- i + 1
+table1[i,] <- get_ds(data, srs.age2, 1, "≥40 months (median)"); i <- i + 1
+table1[i,] <- get_ds(data, srs.age2, 0, "<40 months (median)"); i <- i + 1
 
 table1[i,1] <- "First trimester fish consumption"; i <- i + 1
 table1[i,] <- get_ds(data, fish3, 1, "0-2 times per month"); i <- i + 1
