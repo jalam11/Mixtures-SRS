@@ -1,7 +1,7 @@
 
 # Cleaning data -------------------------------------------------
 
-clean_data <- function(data, mice_filter = T) {
+clean_data <- function(data, mice_filter = T, clean_city = F) {
   cleaned_data <- data %>% 
     
     # Turn plasma total folate concentrations into a categorical variable
@@ -24,19 +24,18 @@ clean_data <- function(data, mice_filter = T) {
     dplyr::mutate(year.enroll4 = year.enroll4 - 2007) %>% 
     
     # Fix the city variable, only cities where SRS was assessed will be included. 
-    mutate(city6 = case_when(city10 == 1 ~ 1,
-                             city10 == 4 ~ 2,
-                             city10 == 5 ~ 3,
-                             city10 == 7 ~ 4,
-                             city10 == 9 ~ 5,
-                             city10 == 10 ~ 6)) %>% 
+    # mutate(city6 = case_when(city10 == 1 ~ 1,
+    #                          city10 == 4 ~ 2,
+    #                          city10 == 5 ~ 3,
+    #                          city10 == 7 ~ 4,
+    #                          city10 == 9 ~ 5,
+    #                          city10 == 10 ~ 6)) %>% 
     
     # Define reference level for categorical variables 
     dplyr::mutate(fol.intake3 =  factor(fol.intake3, levels = c(2, 1, 3))) %>% # Adequate FA is reference
     dplyr::mutate(pl_fol3.t1 =   factor(pl_fol3.t1, levels = c(2, 1, 3))) %>% # 10th - 80th %ile is reference
     dplyr::mutate(pl_fol3.t3 =   factor(pl_fol3.t3, levels = c(2, 1, 3))) %>% # 10th - 80th %ile is reference
     
-    dplyr::mutate(city6 =        factor(city6, levels = c(5, 1, 2, 3, 4, 6))) %>% # Montreal is reference
     dplyr::mutate(income4 =      factor(income4, levels = c(4,1,2,3))) %>%  # > $100K/ year is reference
     dplyr::mutate(edu4 =         factor(edu4, levels = c(3,1,2,4))) %>%  # Undergraduate is reference
     dplyr::mutate(parity3 =      factor(parity3, levels = c(1,2,3))) %>% # nulliparous is reference
@@ -51,7 +50,20 @@ clean_data <- function(data, mice_filter = T) {
     dplyr::mutate(home.score = home.score - mean(data$home.score, na.rm = T)) %>% 
     dplyr::mutate(srs.age = srs.age - mean(data$srs.age, na.rm = T)) %>% 
     dplyr::mutate(mom.age = mom.age - mean(data$mom.age))
+  
+  if(clean_city == T){
+    cleaned_data <- cleaned_data %>% 
+      mutate(city6 = case_when(city10 == 1 ~ 1,
+                               city10 == 4 ~ 2,
+                               city10 == 5 ~ 3,
+                               city10 == 7 ~ 4,
+                               city10 == 9 ~ 5,
+                               city10 == 10 ~ 6)) %>% 
+      dplyr::mutate(city6 = factor(city6, levels = c(5, 1, 2, 3, 4, 6))) # Montreal is reference
+  }
     
+  
+  
     if(mice_filter == T){
       # When I run the analysis, the data will only include variables I need and variables that are necessary for the
       # analysis and variables that will aid with imputation
@@ -60,7 +72,8 @@ clean_data <- function(data, mice_filter = T) {
       # I will set mice_filter to FALSE, then reset it back to true when I run the analysis. 
       
       # Select variables used in the analysis
-      cleaned_data <- cleaned_data %>%
+      if(clean_city == T){
+        cleaned_data <- cleaned_data %>%
         dplyr::select(c(srs, # outcome
                       arsenic.t1.flag:lead.t1.res, mercury.t1.flag:mercury.t1.res, # metals
                       bbhc.t1.flag:transnona.t1.res, # OC pesticides
@@ -75,10 +88,45 @@ clean_data <- function(data, mice_filter = T) {
                       # Variables that aid with imputation 
                       fol.intake, tot_fol.t3, umfa.t3.res,
                       birth.wt, gest.age, alc2, prepreg.bmi, mom.birthplace5)) 
+      } else {
+        cleaned_data <- cleaned_data %>%
+          dplyr::select(c(srs, # outcome
+                          arsenic.t1.flag:lead.t1.res, mercury.t1.flag:mercury.t1.res, # metals
+                          bbhc.t1.flag:transnona.t1.res, # OC pesticides
+                          pfhxs.t1.flag:pfoa.t1.res, # PFAS
+                          pcb118.t1.flag:pcb180.t1.res, # PCBs
+                          bde47.t1.flag:bde47.t1.res, # PBDE
+                          fol.intake3, pl_fol3.t1, sex2, umfa2.t1, # modifiers
+                          income4, edu4, living.status2, home.score, race.white2, # confounders
+                          mom.age, parity3, year.enroll4, srs.age, city10, smoker2,
+                          fish3,
+                          
+                          # Variables that aid with imputation 
+                          fol.intake, tot_fol.t3, umfa.t3.res,
+                          birth.wt, gest.age, alc2, prepreg.bmi, mom.birthplace5)) 
+      }
+      
+      
     } 
 
   return(cleaned_data)
 }
+
+
+clean_city <- function(data) {
+  cleaned_data <- data %>% 
+    mutate(city6 = case_when(city10 == 1 ~ 1,
+                             city10 == 4 ~ 2,
+                             city10 == 5 ~ 3,
+                             city10 == 7 ~ 4,
+                             city10 == 9 ~ 5,
+                             city10 == 10 ~ 6)) %>% 
+    dplyr::mutate(city6 = factor(city6, levels = c(5, 1, 2, 3, 4, 6))) %>%  # Montreal is reference
+    dplyr::select(-c(city10)) 
+  
+  return(cleaned_data)
+}
+
 
 pvalue_rounder <- function(p) 
 {
@@ -108,6 +156,261 @@ pvalue_rounder_v2 <- function(p)
   return(formatted_p)
 }
 
+
+
+
+
+## no interactions -------------------------------------------
+get_mice_res <- function(mira_object, alpha = 0.05, round = 1, name_x = "") {
+  
+  # make container to store results
+  table <- setNames(data.frame(matrix(data = NA, 
+                                      nrow = 1, 
+                                      ncol = 9)), #make dataframe
+                    c("x_name", "z_value", "z_name", "z_level", 
+                      "beta", "lb", "ub", "p_int", "ci width")) #set column names
+  
+  # store parameters
+  res_pooled <- pool(mira_object)
+  summary <- summary(res_pooled)
+  
+  beta <- summary$estimate[2]
+  se <- summary$std.error[2]
+  
+  # calculate CIs
+  df <- summary$df[2]
+  t <- qt(1 - (alpha / 2), df)
+  
+  lb <- beta - (t * se)
+  ub <- beta + (t * se)
+  
+  # store results
+  table[1,1] <- name_x
+  table[1,2] <- NA
+  table[1,3] <- "All"
+  table[1,4] <- NA
+  table[1,5] <- round(beta, round) # beta coef
+  table[1,6] <- round(lb, round) # lb
+  table[1,7] <- round(ub, round) # ub
+  table[1,8] <- NA
+  table[1,9] <- round(ub - lb, round)  # ci width
+  
+  return(table)
+}
+
+# Inverse probability weighting -------------------------------
+ipw_analysis <- function(data, m_ipw = 10, seed = 1010) {
+  
+  # flag included participatns
+  data$included <- ifelse(!is.na(data$srs), 
+                          1, # included participants coded as 1
+                          0) # excluded participants coded as 0
+  p_inclusion <- mean(data$included)  # Overall probability of being in data_subset
+  
+  # Fill in missing data in the entire dataset
+  imputed_data_all <- mice(data, m = m_ipw, printFlag = F, seed = seed)
+  
+  # Make propensity score model with imputed data
+  ps_model <- with(imputed_data_all,
+                   glm(included ~ sex2 + income4 + edu4 + living.status2 + race.white2 + mom.age + city10 + year.enroll4 + smoker2,
+                       family = "binomial"))
+  
+  # Pool the results
+  pooled_ps_model <-  ps_model$analyses[[1]] # create model with only results from 1st imputed dataset as a placeholder
+  pooled_ps_model$coefficients <-  summary(pool(ps_model))$estimate # And fill it in with the pooled results
+  
+  # Calculate propensity scores
+  pscore_mice <- stats::predict(pooled_ps_model, type = "response")
+  
+  # Add the propensity scores to the original data set
+  data <- data %>%
+    mutate(pscore_mice = pscore_mice)
+  
+  ## Calculate inverse probability weights
+  data <- data %>% 
+    mutate(ipw = ifelse(data$included == 1,
+                        (1 / pscore_mice),
+                        NA)) %>% 
+    mutate(ipw_stabilized = ifelse(data$included == 1,
+                                   (p_inclusion / pscore_mice),
+                                   NA)) 
+  
+  return(data)
+}
+
+# Individual associations -------------------------------------
+get_mice_res_int <- function(mira_object, alpha = 0.05,
+                             round = 1, round_p = 4, name_x = "", name_z = "", 
+                             levels = c(0, 1), level_names = c("","")) {
+  
+  # make container to store results
+  table_int <- setNames(data.frame(matrix(data = NA, 
+                                          nrow = 2, 
+                                          ncol = 9)), #make dataframe
+                        c("x_name", "z_value", "z_name", "z_level", 
+                          "beta", "lb", "ub", "p_int", "ci width")) #set column names
+  
+  # prep z variable
+  lvl1 <- levels[1] 
+  lvl2 <- levels[2]
+  
+  name_lvl1 <- paste0(level_names[1])
+  name_lvl2 <- paste0(level_names[2])
+  
+  # store model parameters
+  res_pooled <- pool(mira_object)
+  summary <- summary(res_pooled)
+  
+  beta_x <- summary$estimate[2]
+  beta_xz <- rev(summary$estimate)[1] # selects last entry
+  
+  p_int <- rev(summary$p.value)[1] # selects last entry
+  
+  # calculate variance-covariance matrix (Using Rubin's rules)
+  m <- res_pooled$m
+  ubar <- Reduce("+", lapply(mira_object$analyses, vcov)) / (m)
+  b <- res_pooled$pooled$b 
+  vcov <- ubar + (1 + 1 / (m)) * b
+  
+  # store values needed for calculating intervals
+  var_x <- diag(vcov)[2] 
+  var_xz <- rev(diag(vcov))[1] # selects last entry
+  cov_x_xz <- rev(vcov[,2])[1] # selects the last entry of the 2nd column
+  
+  df <- summary$df[2]
+  t <- qt(1 - (alpha / 2), df) 
+  
+  # calculate beta and 95% intervals
+  beta_lvl1 <- beta_x + beta_xz*lvl1 # just equals beta_x when lvl1 = 0 (default)
+  beta_lvl2 <- beta_x + beta_xz*lvl2
+  
+  lb_lvl1 <- beta_lvl1 - ( t * sqrt(var_x + (lvl1)^2 * var_xz + 2 * lvl1 * cov_x_xz) )
+  ub_lvl1 <- beta_lvl1 + ( t * sqrt(var_x + (lvl1)^2 * var_xz + 2 * lvl1 * cov_x_xz) )
+  
+  lb_lvl2 <- beta_lvl2 - ( t * sqrt(var_x + (lvl2)^2 * var_xz + 2 * lvl2 * cov_x_xz) )
+  ub_lvl2 <- beta_lvl2 + ( t * sqrt(var_x + (lvl2)^2 * var_xz + 2 * lvl2 * cov_x_xz) )
+  
+  # store results
+  table_int[1, 1] <- name_x
+  table_int[1, 2] <- lvl1
+  table_int[1, 3] <- name_z
+  table_int[1, 4] <- name_lvl1
+  table_int[1, 5] <- round(beta_lvl1, round) # beta coef
+  table_int[1, 6] <- round(lb_lvl1, round) # lb
+  table_int[1, 7] <- round(ub_lvl1, round) # ub
+  table_int[1, 8] <- round(p_int, round_p) # p value for interaction
+  table_int[1, 9] <- round(ub_lvl1-lb_lvl1, round) # ci width
+  
+  table_int[2, 1] <- name_x
+  table_int[2, 2] <- lvl2
+  table_int[2, 3] <- name_z
+  table_int[2, 4] <- name_lvl2
+  table_int[2, 5] <- round(beta_lvl2, round) # beta coef
+  table_int[2, 6] <- round(lb_lvl2, round) # lb
+  table_int[2, 7] <- round(ub_lvl2, round) # ub
+  table_int[2, 8] <- round(p_int, round_p) # p value for interaction
+  table_int[2, 9] <- round(ub_lvl2-lb_lvl2, round) # CI width
+  
+  return(table_int)
+}
+
+
+get_mice_res_intcat3 <- function(mira_object, alpha = 0.05,
+                                 round = 1, round_p = 4, name_x = "", name_z = "", 
+                                 level_names = c("","","")) {
+  
+  # make container to store results
+  table_int <- setNames(data.frame(matrix(data = NA, 
+                                          nrow = 3, 
+                                          ncol = 9)), #make dataframe
+                        c("x_name", "z_value", "z_name", "z_level", 
+                          "beta", "lb", "ub", "p_int", "ci width")) #set column names
+  
+  # prep z variable
+  # lvl1 <- levels[1] 
+  # lvl2 <- levels[2]
+  # lvl3 <- levels[3]
+  
+  name_lvl1 <- paste0(level_names[1])
+  name_lvl2 <- paste0(level_names[2])
+  name_lvl3 <- paste0(level_names[3])
+  
+  # store model parameters
+  res_pooled <- pool(mira_object)
+  summary <- summary(res_pooled)
+  
+  beta_x <- summary$estimate[2]
+  beta_xz2 <- rev(summary$estimate)[2] # selects the second-last entry
+  beta_xz3 <- rev(summary$estimate)[1] # selects the last entry
+  
+  p_int_xz2 <- rev(summary$p.value)[2] # selects the second-last entry
+  p_int_xz3 <- rev(summary$p.value)[1] # selects the last entry
+  
+  # calculate variance-covariance matrix (Using Rubin's rules)
+  m <- res_pooled$m
+  ubar <- Reduce("+", lapply(mira_object$analyses, vcov)) / (m)
+  b <- res_pooled$pooled$b 
+  vcov <- ubar + (1 + 1 / (m)) * b
+  
+  # store values needed for calculating intervals
+  var_x <- diag(vcov)[2] 
+  
+  var_xz2 <- rev(diag(vcov))[2] # selects the second-last entry
+  var_xz3 <- rev(diag(vcov))[1] # selects the last entry
+  
+  cov_x_xz2 <- rev(vcov[,2])[2] # selects the second-last entry of the 2nd column
+  cov_x_xz3 <- rev(vcov[,2])[1] # selects the last entry of the 2nd column
+  
+  df <- summary$df[2]
+  t <- qt(1 - (alpha / 2), df) 
+  
+  # calculate beta and 95% intervals
+  beta_lvl1 <- beta_x  # just equals beta_x when lvl1 = 0 (default)
+  beta_lvl2 <- beta_x + beta_xz2
+  beta_lvl3 <- beta_x + beta_xz3
+  
+  lb_lvl1 <- beta_lvl1 - ( t * sqrt(var_x))
+  ub_lvl1 <- beta_lvl1 + ( t * sqrt(var_x))
+  
+  lb_lvl2 <- beta_lvl2 - ( t * sqrt(var_x + var_xz2 + 2*cov_x_xz2) )
+  ub_lvl2 <- beta_lvl2 + ( t * sqrt(var_x + var_xz2 + 2*cov_x_xz2) )
+  
+  lb_lvl3 <- beta_lvl3 - ( t * sqrt(var_x + var_xz3 + 2*cov_x_xz3) )
+  ub_lvl3 <- beta_lvl3 + ( t * sqrt(var_x + var_xz3 + 2*cov_x_xz3) )
+  
+  # store results
+  table_int[1, 1] <- name_x
+  table_int[1, 2] <- NA
+  table_int[1, 3] <- name_z
+  table_int[1, 4] <- name_lvl1
+  table_int[1, 5] <- round(beta_lvl1, round) # beta coef
+  table_int[1, 6] <- round(lb_lvl1, round) # lb
+  table_int[1, 7] <- round(ub_lvl1, round) # ub
+  table_int[1, 8] <- NA
+  table_int[1, 9] <- round(ub_lvl1 - lb_lvl1, round) # CI width
+  
+  table_int[2, 1] <- name_x
+  table_int[2, 2] <- NA
+  table_int[2, 3] <- name_z
+  table_int[2, 4] <- name_lvl2
+  table_int[2, 5] <- round(beta_lvl2, round) # beta coef
+  table_int[2, 6] <- round(lb_lvl2, round) # lb
+  table_int[2, 7] <- round(ub_lvl2, round) # ub
+  table_int[2, 8] <- round(p_int_xz2, round_p) # p value for interaction
+  table_int[2, 9] <- round(ub_lvl2 - lb_lvl2, round) # ci width
+  
+  table_int[3, 1] <- name_x
+  table_int[3, 2] <- NA
+  table_int[3, 3] <- name_z
+  table_int[3, 4] <- name_lvl3
+  table_int[3, 5] <- round(beta_lvl3, round) # beta coef
+  table_int[3, 6] <- round(lb_lvl3, round) # lb
+  table_int[3, 7] <- round(ub_lvl3, round) # ub
+  table_int[3, 8] <- round(p_int_xz3, round_p) # p value for interaction
+  table_int[3, 9] <- round(ub_lvl3 - lb_lvl3, round) # ci width
+  
+  return(table_int)
+}
 
 # quantile g-comp ---------------------------------------------
 get_qgcomp_weights <- function(fit, expnms = NULL, mixture_name = NULL, 
@@ -156,8 +459,8 @@ get_qgcomp_weights <- function(fit, expnms = NULL, mixture_name = NULL,
 
 
 analysis_qgcomp <- function(chemical_names_list, mixture_names, y, confounder_names = c(), 
-                            mice_data,
-                            q = 4, round = 2, round_p = 3, alpha = 0.05){
+                                    mice_data,
+                                    q = 4, round = 2, round_p = 3, alpha = 0.05, weights = NULL){
   require(qgcomp)
   
   # Prep ----
@@ -184,11 +487,24 @@ analysis_qgcomp <- function(chemical_names_list, mixture_names, y, confounder_na
     
     for (k in 1:m){
       # Extract the kth imputed dataset
-      imputed_data_k <- complete(imputed_data, action = k)
+      imputed_data_k <- complete(mice_data, action = k)
+      
+      # Prepare inverse probability weights
+      if(is.null(weights) == F){
+        ip_weights <- imputed_data_k[,weights]
+        
+        imputed_data_k <- imputed_data_k %>% 
+          mutate(ip_weights = ip_weights) 
+      }
       
       # Fit the model with the kth imputed dataset
-      fit <- qgcomp(this_formula, q = q, expnms = this_chemical_names, 
-                    data = imputed_data_k)
+      if(is.null(weights)==T){
+        fit <- qgcomp.glm.noboot(this_formula, q = q, expnms = this_chemical_names, 
+                                 data = imputed_data_k)
+      } else {
+        fit <- qgcomp.glm.noboot(this_formula, q = q, expnms = this_chemical_names, 
+                                 data = imputed_data_k, weights = ip_weights)
+      }
       
       # Save the fitted model
       results_all_k_datasets[[k]] <- fit
@@ -206,8 +522,15 @@ analysis_qgcomp <- function(chemical_names_list, mixture_names, y, confounder_na
     # Store pooled results ----
     psi <- qgcomp_res[2, 2]
     se <- qgcomp_res[2, 3]
-    df <- qgcomp_res[2, 5]
-    p <- qgcomp_res[2, 6]
+    
+    ###### March 21, 2025: pool() no longer estimates df, must now extract manually
+    ###### The df value will be constant across all imputations. Can extract df from the most recently created model
+    # df <- qgcomp_res[2, 5]
+    df <- fit$df
+    
+    ###### March 21, 2025: pool() no longer estimates p values, must now calculate manually
+    # p <- qgcomp_res[2, 6]
+    p <- pt(abs(psi/se), df, lower.tail = F)*2
     
     t <- qt(1 - (alpha / 2), df) 
     lb <- psi - (t * se)
@@ -246,7 +569,8 @@ analysis_qgcomp <- function(chemical_names_list, mixture_names, y, confounder_na
 analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, emmvar, 
                                        confounder_names = c(), mice_data, alpha = 0.05,
                                        mod_var_name = NULL, level_names = c("1", "2"), 
-                                       q = 4, round = 2, round_p = 3){
+                                       q = 4, round = 2, round_p = 3, 
+                                       weights = NULL){
   
   # Prep ----
   if(is.null(mod_var_name) == T){ # If the character string 'mod_var_name' is not provided, 
@@ -283,6 +607,14 @@ analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, em
       # Extract the kth imputed dataset
       imputed_data_k <- complete(imputed_data, action = k)
       
+      # Prepare inverse probability weights
+      if(is.null(weights) == F){
+        ip_weights <- imputed_data_k[,weights]
+        
+        imputed_data_k <- imputed_data_k %>% 
+          mutate(ip_weights = ip_weights) 
+      }
+      
       # Add a new column for the modifying variable so the next part works
       modifying_variable <- imputed_data_k[,emmvar]
       
@@ -294,9 +626,16 @@ analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, em
       ## with any modifying variable. 
       
       # Fit the model with the kth imputed dataset
-      fit_mice <- qgcomp.emm.noboot(this_formula, q = q, expnms = this_chemical_names, 
-                                    data = imputed_data_k,
-                                    emmvar = "modifying_variable")
+      if(is.null(weights)==T){
+        fit_mice <- qgcomp.emm.noboot(this_formula, q = q, expnms = this_chemical_names, 
+                                      data = imputed_data_k,
+                                      emmvar = "modifying_variable")
+      } else {
+        fit_mice <- qgcomp.emm.noboot(this_formula, q = q, expnms = this_chemical_names, 
+                                      data = imputed_data_k,
+                                      emmvar = "modifying_variable",
+                                      weights = ip_weights)
+      }
       
       # Extract model, variance-covarian matrix for all k datasets
       results_all_k_datasets[[k]] <- fit_mice
@@ -319,7 +658,7 @@ analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, em
     # Extract model parameters
     psi_x <- summary$estimate[2]
     psi_xz <- rev(summary$estimate)[1] # selects last entry
-    p_int <- rev(summary$p.value)[1] # selects last entry
+    
     
     # calculate variance-covariance matrix (Using Rubin's rules)
     ubar <- Reduce("+", vcov_all_k_datasets) / (m)
@@ -331,7 +670,11 @@ analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, em
     var_xz <- rev(diag(vcov))[1] # selects last entry
     cov_x_xz <- rev(vcov[,2])[1] # selects the last entry of the 2nd column
     
-    df <- summary$df[2]
+    ###### March 21, 2025: pool() no longer estimates df, must now extract manually
+    ###### The df value will be constant across all imputations. Can extract df from the most recently created model
+    # df <- summary$df[2]
+    df <- fit_mice$df 
+    
     t <- qt(1 - (alpha / 2), df)
     
     # Calculate psi and 95% intervals
@@ -343,6 +686,11 @@ analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, em
     
     lb_lvl1 <- psi_lvl1 - ( t * sqrt(var_x + var_xz + 2 * cov_x_xz) )
     ub_lvl1 <- psi_lvl1 + ( t * sqrt(var_x + var_xz + 2 * cov_x_xz) )
+    
+    # Calculate p-interaction value
+    ###### March 21, 2025: pool() no longer estimates p values, must now calculate manually
+    # p_int <- rev(summary$p.value)[1] # selects last entry
+    p_int <- pt(abs(psi_xz/sqrt(var_xz)), df, lower.tail = F)*2
     
     # Store pooled results ----
     ## Information for all levels
@@ -396,7 +744,7 @@ analysis_qgcomp.emm_binary <- function(chemical_names_list, mixture_names, y, em
 analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmvar, 
                                      confounder_names = c(), mice_data, alpha = 0.05,
                                      mod_var_name = NULL, level_names = c("1", "2", "3"), 
-                                     q = 4, round = 2, round_p = 3){
+                                     q = 4, round = 2, round_p = 3, weights = NULL){
   
   # Prep ----
   if(is.null(mod_var_name) == T){ # If the character string 'mod_var_name' is not provided, 
@@ -424,6 +772,8 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
     this_formula <- as.formula(paste(y, " ~ ", 
                                      paste(c(this_chemical_names, confounder_names), collapse = "+")))
     
+    
+    
     # Make lists to store data needed to calculate results
     results_all_k_datasets <- list()
     vcov_all_k_datasets <- list()
@@ -433,7 +783,15 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
     for (k in 1:m){
       
       # Extract the kth imputed dataset
-      imputed_data_k <- complete(imputed_data, action = k)
+      imputed_data_k <- complete(mice_data, action = k)
+      
+      # Prepare inverse probability weights
+      if(is.null(weights) == F){
+        ip_weights <- imputed_data_k[,weights]
+        
+        imputed_data_k <- imputed_data_k %>% 
+          mutate(ip_weights = ip_weights) 
+      }
       
       # Add a new column for the modifying variable so the next part works
       modifying_variable <- imputed_data_k[,emmvar]
@@ -446,9 +804,16 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
       ## with any modifying variable. 
       
       # Fit the model with the kth imputed dataset
-      fit_mice <- qgcomp.emm.noboot(this_formula, q = q, expnms = this_chemical_names, 
-                                    data = imputed_data_k,
-                                    emmvar = "modifying_variable")
+      if(is.null(weights)==T){
+        fit_mice <- qgcomp.emm.noboot(this_formula, q = q, expnms = this_chemical_names, 
+                                      data = imputed_data_k,
+                                      emmvar = "modifying_variable")
+      } else {
+        fit_mice <- qgcomp.emm.noboot(this_formula, q = q, expnms = this_chemical_names, 
+                                      data = imputed_data_k,
+                                      emmvar = "modifying_variable",
+                                      weights = ip_weights)
+      }
       
       # Extract model, variance-covarian matrix for all k datasets
       results_all_k_datasets[[k]] <- fit_mice
@@ -472,8 +837,6 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
     psi_x <- summary$estimate[2]
     psi_xz2 <- summary$estimate[4] 
     psi_xz3 <- summary$estimate[6] 
-    p_int_xz2 <- summary$p.value[4] 
-    p_int_xz3 <- summary$p.value[6] 
     
     # calculate variance-covariance matrix (Using Rubin's rules)
     ubar <- Reduce("+", vcov_all_k_datasets) / (m)
@@ -489,7 +852,10 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
     cov_x_xz2 <- vcov[4,2] 
     cov_x_xz3 <- vcov[6,2]
     
-    df <- summary$df[2]
+    ###### March 21, 2025: pool() no longer estimates df, must now extract manually
+    ###### The df value will be constant across all imputations. Can extract df from the most recently created model
+    # df <- summary$df[2]
+    df <- fit_mice$df 
     t <- qt(1 - (alpha / 2), df)
     
     # Calculate psi and 95% intervals
@@ -505,6 +871,13 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
     
     lb_lvl3 <- psi_lvl3 - ( t * sqrt(var_x + var_xz3 + 2*cov_x_xz3) )
     ub_lvl3 <- psi_lvl3 + ( t * sqrt(var_x + var_xz3 + 2*cov_x_xz3) )
+    
+    # Calculate p-interaction values
+    ###### March 21, 2025: pool() no longer estimates p values, must now calculate manually
+    # p_int_xz2 <- summary$p.value[4] 
+    # p_int_xz3 <- summary$p.value[6] 
+    p_int_xz2 <- pt(abs(psi_xz2/sqrt(var_xz2)), df, lower.tail = F)*2
+    p_int_xz3 <- pt(abs(psi_xz3/sqrt(var_xz3)), df, lower.tail = F)*2
     
     # Store pooled results ----
     ## Information for all levels
@@ -558,8 +931,9 @@ analysis_qgcomp.emm_cat3 <- function(chemical_names_list, mixture_names, y, emmv
   #       \n4) A list for each chemical mixture with all of the weights for each imputation
   #       \n5) A list for each chemical mixture with the pooled weights")
   return(list(table_qgcomp_mod, df_all_weights, df_all_pooled_weights, 
-              all_weights, all_pooled_weights))
+              all_weights, all_pooled_weights, fit_mice))
 }
+
 
 # Saving -----------------------------------------------------------------------
 my_write.csv <- function(x, path, file_name, archive = T,
